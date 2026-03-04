@@ -21,6 +21,7 @@ public class PlayerAnimationHandler : MonoBehaviour
     private static readonly int DoubleJumpHash = Animator.StringToHash("DoubleJump");
     private static readonly int LandHash = Animator.StringToHash("Land");
     private static readonly int ThrowHash = Animator.StringToHash("Throw");
+    private static readonly int StumbleHash = Animator.StringToHash("Stumble");
 
     void Awake()
     {
@@ -92,6 +93,11 @@ public class PlayerAnimationHandler : MonoBehaviour
     public void TriggerThrow()
     {
         SetTriggerSafe(ThrowHash);
+    }
+
+    public void TriggerStumble()
+    {
+        SetTriggerSafe(StumbleHash);
     }
 
     // --- Safe setters (don't error if parameter doesn't exist yet in animator) ---

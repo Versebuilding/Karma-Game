@@ -33,6 +33,17 @@ public class PlayerController : MonoBehaviour
     public float crouchHeight = 3.5f;
     public float standHeight = 6f;
 
+    // ─── Boundary / Stumble ────────────────────────────────────
+    [Header("Boundary Stumble")]
+    [Tooltip("Layer mask for boundary colliders that trigger the stumble animation")]
+    public LayerMask boundaryLayer;
+
+    [Tooltip("Cooldown between stumble animations (seconds)")]
+    [Range(0.5f, 5f)] public float stumbleCooldown = 1.5f;
+
+    [Tooltip("How long the player is slowed after hitting a boundary")]
+    [Range(0.1f, 2f)] public float stumbleDuration = 0.6f;
+
     // ─── Interaction ──────────────────────────────────────────
     [Header("Interaction")]
     public float interactRange = 4f;
@@ -71,6 +82,10 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public InteractionDetector interactionDetector;
     [HideInInspector] public PlayerStateMachine stateMachine;
 
+    // ─── Original CharacterController settings (captured at Awake) ──
+    [HideInInspector] public float originalCCHeight;
+    [HideInInspector] public Vector3 originalCCCenter;
+
     // ─── Shared state (writable by states) ────────────────────
     [HideInInspector] public Vector3 velocity;
     [HideInInspector] public bool isGrounded;
@@ -80,6 +95,8 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public GameObject interactionTarget;
     [HideInInspector] public float coyoteTimeCounter;
     [HideInInspector] public float jumpBufferCounter;
+    [HideInInspector] public float stumbleCooldownTimer;
+    [HideInInspector] public float stumbleTimer;
 
     // ─── Events for UI team ───────────────────────────────────
     public event Action<string> OnStateChanged;
@@ -87,6 +104,13 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+
+        // Capture original CC settings from the prefab so crouch/stand
+        // calculations always keep the capsule bottom in the same place.
+        originalCCHeight = controller.height;
+        originalCCCenter = controller.center;
+        standHeight = originalCCHeight; // sync with prefab instead of using hardcoded value
+
         input = GetComponent<PlayerInputHandler>();
         anim = GetComponentInChildren<PlayerAnimationHandler>();
         interactionDetector = GetComponentInChildren<InteractionDetector>();
@@ -119,6 +143,10 @@ public class PlayerController : MonoBehaviour
             coyoteTimeCounter -= Time.deltaTime;
         if (jumpBufferCounter > 0f)
             jumpBufferCounter -= Time.deltaTime;
+        if (stumbleCooldownTimer > 0f)
+            stumbleCooldownTimer -= Time.deltaTime;
+        if (stumbleTimer > 0f)
+            stumbleTimer -= Time.deltaTime;
 
         // Buffer jump input
         if (input.JumpPressed)
@@ -141,13 +169,41 @@ public class PlayerController : MonoBehaviour
         OnStateChanged?.Invoke(stateName);
     }
 
+    /// <summary>True while the stumble animation is playing (movement slowed).</summary>
+    public bool IsStumbling => stumbleTimer > 0f;
+
+    /// <summary>
+    /// Called by CharacterController when the player collides with a collider.
+    /// Triggers stumble animation when hitting a boundary while moving toward it.
+    /// </summary>
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // Only trigger stumble if:
+        //  - The collider is on the Boundary layer
+        //  - The player is actively trying to move (pressing input)
+        //  - Not already on stumble cooldown
+        //  - Currently grounded (don't stumble mid-air)
+        if (boundaryLayer == (boundaryLayer | (1 << hit.gameObject.layer))
+            && input.MoveInput.sqrMagnitude > 0.1f
+            && stumbleCooldownTimer <= 0f
+            && isGrounded
+            && hit.normal.y < 0.5f) // wall-like surface, not floor
+        {
+            stumbleCooldownTimer = stumbleCooldown;
+            stumbleTimer = stumbleDuration;
+            anim.TriggerStumble();
+        }
+    }
+
     /// <summary>
     /// Check if there's enough clearance above to stand up from crouch.
     /// </summary>
     public bool CanStandUp()
     {
         float checkDistance = standHeight - crouchHeight + 0.1f;
-        Vector3 origin = transform.position + Vector3.up * crouchHeight;
+        // Raycast from the top of the crouched capsule (center + half height)
+        float crouchTop = controller.center.y + crouchHeight * 0.5f;
+        Vector3 origin = transform.position + Vector3.up * crouchTop;
         return !Physics.Raycast(origin, Vector3.up, checkDistance);
     }
 }

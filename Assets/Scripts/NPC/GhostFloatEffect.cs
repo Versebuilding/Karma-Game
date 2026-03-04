@@ -11,6 +11,9 @@ public class GhostFloatEffect : MonoBehaviour
 {
     // ─── Float Settings ──────────────────────────────────────────
     [Header("Float Settings")]
+    [Tooltip("Height above parent to hover (must be >= floatAmplitude to prevent terrain clipping)")]
+    [Range(0f, 5f)] [SerializeField] private float floatHeight = 1.0f;
+
     [Tooltip("How high the ghost bobs up and down (in local units)")]
     [Range(0.05f, 2f)] [SerializeField] private float floatAmplitude = 0.3f;
 
@@ -51,8 +54,10 @@ public class GhostFloatEffect : MonoBehaviour
 
     void Update()
     {
-        // Sine wave float
-        float yOffset = Mathf.Sin(Time.time * floatFrequency * Mathf.PI * 2f + floatOffset) * floatAmplitude;
+        // Sine wave float — floatHeight keeps the ghost above the parent (terrain level).
+        // With floatHeight >= floatAmplitude, the ghost never dips below the parent's Y.
+        float sineOffset = Mathf.Sin(Time.time * floatFrequency * Mathf.PI * 2f + floatOffset) * floatAmplitude;
+        float yOffset = floatHeight + sineOffset;
         transform.localPosition = new Vector3(
             baseLocalPosition.x,
             baseLocalPosition.y + yOffset,
@@ -85,11 +90,15 @@ public class GhostFloatEffect : MonoBehaviour
             ? transform.parent.TransformPoint(baseLocalPosition)
             : transform.position;
 
-        // Draw top and bottom of bob range
-        Vector3 top = worldPos + Vector3.up * floatAmplitude;
-        Vector3 bottom = worldPos - Vector3.up * floatAmplitude;
+        // Draw top and bottom of bob range (including floatHeight offset)
+        Vector3 top = worldPos + Vector3.up * (floatHeight + floatAmplitude);
+        Vector3 bottom = worldPos + Vector3.up * (floatHeight - floatAmplitude);
         Gizmos.DrawLine(top, bottom);
         Gizmos.DrawSphere(top, 0.1f);
         Gizmos.DrawSphere(bottom, 0.1f);
+
+        // Draw terrain line (parent position) for reference
+        Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.3f);
+        Gizmos.DrawLine(worldPos + Vector3.left * 0.5f, worldPos + Vector3.right * 0.5f);
     }
 }

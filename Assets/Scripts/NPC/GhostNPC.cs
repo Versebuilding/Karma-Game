@@ -20,6 +20,16 @@ public class GhostNPC : MonoBehaviour
     //  INSPECTOR FIELDS — All editable from Inspector
     // ═══════════════════════════════════════════════════════════════
 
+    // ─── Ground / Height ────────────────────────────────────────
+    [Header("Ground / Height")]
+    [Tooltip("Height offset above terrain. Set to half the ghost model height so the " +
+             "bottom of the mesh sits at ground level. Set to 0 to auto-detect from child mesh.")]
+    [Range(0f, 10f)] [SerializeField] private float groundOffset = 0f;
+
+    [Tooltip("If true, automatically calculates groundOffset from the child mesh " +
+             "renderer bounds at Start (recommended for first-time setup)")]
+    [SerializeField] private bool autoDetectGroundOffset = true;
+
     // ─── Roaming ─────────────────────────────────────────────────
     [Header("Roaming")]
     [Tooltip("Maximum distance from spawn point the ghost will wander")]
@@ -199,12 +209,34 @@ public class GhostNPC : MonoBehaviour
         hashGreet = Animator.StringToHash(greetTrigger);
         hashScream = Animator.StringToHash(screamTrigger);
 
+        // Auto-detect ground offset from child mesh bounds
+        if (autoDetectGroundOffset || groundOffset <= 0f)
+        {
+            Renderer meshRenderer = GetComponentInChildren<Renderer>();
+            if (meshRenderer != null)
+            {
+                // The mesh bounds min.y relative to this transform tells us
+                // how far below the pivot the mesh extends. We need to raise
+                // the agent by that amount so the mesh bottom sits at ground.
+                float meshBottomLocal = transform.InverseTransformPoint(meshRenderer.bounds.min).y;
+                groundOffset = Mathf.Max(0f, -meshBottomLocal) + 0.5f; // +0.5 padding to sit above terrain
+                Debug.Log($"GhostNPC '{gameObject.name}': Auto-detected groundOffset = {groundOffset:F2} (includes 0.5 padding)");
+            }
+            else
+            {
+                groundOffset = 1.5f; // safe fallback
+                Debug.LogWarning($"GhostNPC '{gameObject.name}': No Renderer found for auto-detect. " +
+                    "Using fallback groundOffset = {groundOffset}. Set manually in Inspector.");
+            }
+        }
+
         // Configure NavMeshAgent defaults
         agent.speed = roamSpeed;
         agent.angularSpeed = 120f;
         agent.stoppingDistance = waypointReachedDist;
         agent.autoBraking = true;
         agent.updateRotation = false; // we rotate manually for smoothness
+        agent.baseOffset = groundOffset; // raise agent so mesh bottom sits on terrain
 
         // Configure AudioSource
         audioSource.playOnAwake = false;
@@ -219,6 +251,12 @@ public class GhostNPC : MonoBehaviour
     {
         // Find player by tag
         FindPlayer();
+
+        // Auto-wire karma evaluator to KarmaManager if available
+        if (karmaEvaluator == null && KarmaManager.Instance != null)
+        {
+            SetKarmaEvaluator(() => KarmaManager.Instance.GetNormalizedKarma());
+        }
 
         // Snap to NavMesh if not already on it
         SnapToNavMesh();

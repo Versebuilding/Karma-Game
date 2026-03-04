@@ -12,10 +12,18 @@ public class CrouchState : PlayerState
     {
         player.isCrouching = true;
 
-        // Shrink CharacterController height, keep feet on ground
+        // Shrink CharacterController height while keeping the capsule BOTTOM
+        // at exactly the same position (feet stay on ground).
+        //
+        // Standing bottom = originalCenter.y - standHeight/2
+        // Crouch bottom must match: crouchCenter.y - crouchHeight/2 = standing bottom
+        // => crouchCenter.y = standing bottom + crouchHeight/2
+        float standingBottom = player.originalCCCenter.y - player.standHeight * 0.5f;
+        float crouchCenterY = standingBottom + player.crouchHeight * 0.5f;
+
         player.controller.height = player.crouchHeight;
-        float centerY = player.crouchHeight * 0.5f;
-        player.controller.center = new Vector3(0f, centerY, 0f);
+        player.controller.center = new Vector3(
+            player.originalCCCenter.x, crouchCenterY, player.originalCCCenter.z);
 
         player.anim.SetCrouching(true);
     }
@@ -70,8 +78,8 @@ public class CrouchState : PlayerState
 
     private void RestoreStandingHeight()
     {
+        // Restore the exact original CC values from the prefab
         player.controller.height = player.standHeight;
-        float centerY = player.standHeight * 0.5f;
-        player.controller.center = new Vector3(0f, centerY, 0f);
+        player.controller.center = player.originalCCCenter;
     }
 }
