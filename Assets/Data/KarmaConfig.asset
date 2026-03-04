@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c81888e1e7fd4e91af5fd76c82898bc, type: 3}
+  m_Name: KarmaConfig
+  m_EditorClassIdentifier: 
+  maxLevel: 7
+  xpPerLevel: 500
+  startingKarma: 0
+  flowerBaseSprite: {fileID: 0}
+  petalSprites: []
+  barColor: {r: 1, g: 0.6, b: 0.2, a: 1}
+  levelUpFlashColor: {r: 1, g: 0.9, b: 0.4, a: 1}
+  karmaGainClip: {fileID: 8300000, guid: f477bf10e60d54572bf37dc8b1c00cbf, type: 3}
+  karmaLossClip: {fileID: 8300000, guid: e07de7c456e23408783e08c57b85c1a5, type: 3}
+  levelUpClip: {fileID: 8300000, guid: 946a4317505304143af4d39ee6b184eb, type: 3}

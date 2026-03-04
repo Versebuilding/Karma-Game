@@ -57,6 +57,10 @@ public class GroundedState : PlayerState
         bool sprinting = player.input.SprintHeld && player.input.MoveInput.sqrMagnitude > 0.01f;
         float speed = sprinting ? player.sprintSpeed : player.walkSpeed;
 
+        // Slow down during stumble
+        if (player.IsStumbling)
+            speed *= 0.15f;
+
         Vector3 moveDir = GetCameraRelativeDirection(player.input.MoveInput);
         player.velocity.x = moveDir.x * speed;
         player.velocity.z = moveDir.z * speed;
