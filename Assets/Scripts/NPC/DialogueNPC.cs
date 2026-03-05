@@ -349,9 +349,8 @@ public class DialogueNPC : InteractableBase
                 animCycler.enabled = false;
 
             // Play the specific animation clip by name
-            // (clip must exist as a state in the NPC's Animator Controller)
             if (animator != null)
-                animator.CrossFade(node.nodeAnimation.name, 0.25f);
+                TryCrossFade(node.nodeAnimation.name, 0.25f);
 
             isPlayingNodeAnimation = true;
         }
@@ -485,12 +484,36 @@ public class DialogueNPC : InteractableBase
         while (true)
         {
             if (clips[index] != null && animator != null)
-                animator.CrossFade(clips[index].name, 0.25f);
+                TryCrossFade(clips[index].name, 0.25f);
 
             yield return new WaitForSeconds(defaultAnimChangeInterval);
 
             index = (index + 1) % clips.Length;
         }
+    }
+
+    // ─── Animator Helper ──────────────────────────────────
+
+    /// <summary>
+    /// Safely cross-fade to an animation state. Checks that the state exists
+    /// in the Animator Controller first to avoid "State could not be found" errors.
+    /// </summary>
+    private bool TryCrossFade(string stateName, float transitionDuration = 0.25f, int layer = 0)
+    {
+        if (animator == null || string.IsNullOrEmpty(stateName)) return false;
+
+        int stateHash = Animator.StringToHash(stateName);
+        if (!animator.HasState(layer, stateHash))
+        {
+            #if UNITY_EDITOR
+            Debug.LogWarning($"DialogueNPC: Animator state '{stateName}' not found on '{gameObject.name}'. " +
+                             $"Add it as a state in the Animator Controller.");
+            #endif
+            return false;
+        }
+
+        animator.CrossFade(stateHash, transitionDuration, layer);
+        return true;
     }
 
     // ─── Facing Helper ────────────────────────────────────────
