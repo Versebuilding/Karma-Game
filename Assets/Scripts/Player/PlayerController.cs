@@ -17,6 +17,7 @@ public class PlayerController : MonoBehaviour
     public float crouchSpeed = 4f;
     public float carrySpeed = 5f;
     public float pushPullSpeed = 3f;
+    public float climbSpeed = 4f;
     public float rotationSpeed = 12f;
 
     // ─── Jump & Gravity ───────────────────────────────────────

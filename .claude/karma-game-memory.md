@@ -64,24 +64,24 @@
 
 | File | Class | Purpose |
 |------|-------|---------|
-| `PlayerController.cs` | PlayerController | Main player manager. Owns CharacterController, input, animation, state machine. Manages velocity/gravity/jump/stumble. |
+| `PlayerController.cs` | PlayerController | Main player manager. Owns CharacterController, input, animation, state machine. Manages velocity/gravity/jump/stumble. All speed fields: moveSpeed, sprintSpeed, crouchSpeed, pushPullSpeed, climbSpeed (=4f). |
 | `PlayerInputHandler.cs` | PlayerInputHandler | New Input System wrapper. Polled input state: MoveInput, LookInput, JumpPressed, SprintHeld, CrouchPressed, InteractPressed. |
-| `PlayerAnimationHandler.cs` | PlayerAnimationHandler | Centralized animator param management. Hashed params: Speed, IsGrounded, VerticalVelocity, IsCrouching, IsCarrying, IsClimbing, IsPushing, IsSprinting. Triggers: Jump, DoubleJump, Land, Throw, Stumble. |
+| `PlayerAnimationHandler.cs` | PlayerAnimationHandler | Centralized animator param management. HashSet<int> validParams cache (built in Awake from animator.parameters) — O(1) zero-allocation lookup replaces try-catch. Hashed params: Speed, IsGrounded, VerticalVelocity, IsCrouching, IsCarrying, IsClimbing, IsPushing, IsSprinting. Triggers: Jump, DoubleJump, Land, Throw, Stumble. |
 | `StateMachine/PlayerStateMachine.cs` | PlayerStateMachine | Generic state machine with type-safe registration/transitions. |
 | `StateMachine/PlayerState.cs` | PlayerState | Abstract base. Helpers: GetCameraRelativeDirection(), RotateToward(), ApplyGravity(). |
 | `StateMachine/States/GroundedState.cs` | GroundedState | Idle/walk/sprint. Handles crouch/jump/interact transitions. |
 | `StateMachine/States/AirborneState.cs` | AirborneState | Jump/fall with coyote time & jump buffer. |
 | `StateMachine/States/CrouchState.cs` | CrouchState | Reduced height/speed, stand-up clearance check. |
-| `StateMachine/States/CarryState.cs` | CarryState | Hold physics objects, reduced speed, throw. |
-| `StateMachine/States/PushPullState.cs` | PushPullState | Push/pull rigidbody objects. |
-| `StateMachine/States/ClimbState.cs` | ClimbState | Climb on ClimbSurface objects. |
+| `StateMachine/States/CarryState.cs` | CarryState | Hold physics objects, reduced speed. Safe drop: FindSafeDropPosition() SphereCasts 4 directions + feet fallback. Weight-affected throw: effectiveForce = throwForce / Max(weight, 0.1f). Pickup audio via PickupObject.PlaySound(). |
+| `StateMachine/States/PushPullState.cs` | PushPullState | Push/pull rigidbody objects. AlignToNearestFace() snaps player to nearest ±X/±Z face on Enter. canPull enforcement (blocks backward). Friction scaling: speed * 1/(1+friction). Push audio: calls target.PlayPushLoop()/StopPushLoop(). Fall-off-edge → AirborneState. |
+| `StateMachine/States/ClimbState.cs` | ClimbState | Climb on ClimbSurface objects. climbHeight enforcement (blocks upward at max). Lateral boundary: IsOnSurface() raycast + nudge back. Drop off bottom past startY → AirborneState. Uses player.climbSpeed (configurable in Inspector). |
 
 ### NPC System — `Assets/Scripts/NPC/`
 
 | File | Class | Purpose |
 |------|-------|---------|
 | `NPCBase.cs` | NPCBase | Abstract base for all NPCs. Detection radius, FacePlayer(), audio helpers, proximity events. |
-| `DialogueNPC.cs` | DialogueNPC | Extends InteractableBase (NOT NPCBase — required by InteractionDetector's GetComponent). QuickOutline pulsing, SernaAnimCycler, audio fade, ends dialogue on walk-away. |
+| `DialogueNPC.cs` | DialogueNPC | Extends InteractableBase (NOT NPCBase — required by InteractionDetector's GetComponent). QuickOutline pulsing, SernaAnimCycler, audio fade, ends dialogue on walk-away. Sets DialogueManager.ActiveNPCTransform. FacePlayerTowardNPC() rotates player toward NPC during dialogue. Per-node voiceClip + nodeAnimation playback via HandleNodeChanged. Default animation Inspector fields: defaultIdleClips[], defaultTalkClips[], defaultAnimChangeInterval — overrides SernaAnimCycler when populated. |
 | `GhostNPC.cs` | GhostNPC | NavMesh roaming ghosts with 3 states (Roaming/Paused/Reacting). Karma evaluator for behavior. Greet/Scream reactions. |
 | `GhostFloatEffect.cs` | GhostFloatEffect | Visual-only sine-wave floating/bobbing. Independent of GhostNPC movement. |
 
@@ -90,15 +90,15 @@
 | File | Class | Singleton | Events |
 |------|-------|-----------|--------|
 | `KarmaManager.cs` | KarmaManager | Yes (DontDestroyOnLoad) | OnKarmaChanged(delta), OnKarmaLevelUp(level) |
-| `DialogueManager.cs` | DialogueManager | Yes (DontDestroyOnLoad) | OnDialogueStarted, OnNodeChanged, OnChoiceMade, OnDialogueEnded |
-| `WalletManager.cs` | WalletManager | Yes (DontDestroyOnLoad) | OnCoinsChanged(total, delta) |
+| `DialogueManager.cs` | DialogueManager | Yes (DontDestroyOnLoad) | OnDialogueStarted, OnNodeChanged, OnChoiceMade, OnDialogueEnded. Properties: ActiveNPCSpeakerName, ActiveNPCTransform, CurrentNode, IsDialogueActive. One-time rewards: runtime HashSet<string> check per choice (`rewarded_{dialogueId}_{nodeId}_{choiceIndex}`) — resets each Play session (avoids ScriptableObject persistence bug). ClearRewardedChoices() for mid-session reset. |
+| `WalletManager.cs` | WalletManager | Yes (DontDestroyOnLoad) | OnCoinsChanged(total, delta). StartingCoins property for reset. |
 | `HUDManager.cs` | HUDManager | Yes | Bridges manager events to UI |
 
 ### Data Models — `Assets/Scripts/Data/`
 
 | File | Class(es) | Purpose |
 |------|-----------|---------|
-| `DialogueSO.cs` | DialogueSO, DialogueNode, DialogueChoice, ChoiceStyle | Dialogue tree ScriptableObject. Nodes have [SerializeReference] conditions/onShowActions. Choices have conditions/actions + legacy karmaChange/coinChange. |
+| `DialogueSO.cs` | DialogueSO, DialogueNode, DialogueChoice, ChoiceStyle | Dialogue tree ScriptableObject. Nodes have voiceClip + nodeAnimation (optional per-node animation override), [SerializeReference] conditions/onShowActions. Choices have conditions/actions + legacy karmaChange/coinChange. |
 | `KarmaConfig.cs` | KarmaConfig | Karma level config: maxLevel, xpPerLevel, sprites, audio clips. |
 | `VariableStore.cs` | VariableStore, StringBoolEntry, StringIntEntry | Game state store: flags, counters, relationships. Singleton via Resources.Load("GameVariables"). |
 | `Conditions/IDialogueCondition.cs` | IDialogueCondition, ComparisonOp, KarmaLevelCondition, FlagCondition, CounterCondition | Extensible condition interface. [Serializable] classes + [SerializeReference] for polymorphic serialization. |
@@ -109,16 +109,23 @@
 | File | Class | Purpose |
 |------|-------|---------|
 | `IInteractable.cs` | IInteractable | Interface: InteractionPrompt, CanInteract(), Interact(). |
-| `InteractableBase.cs` | InteractableBase | Abstract base. Prompt, OnTargeted/OnUntargeted for highlights. |
-| `InteractionDetector.cs` | InteractionDetector | Trigger-based, angle-weighted target selection. Events: OnPromptChanged, OnPromptHidden. Uses `GetComponent<InteractableBase>()`. |
+| `InteractableBase.cs` | InteractableBase | Abstract base. Prompt, OnTargeted/OnUntargeted with default QuickOutline toggle (lazy-cached lookup via outlineLookedUp flag). Any InteractableBase with QuickOutline component auto-highlights when targeted. Subclasses can override. |
+| `InteractionDetector.cs` | InteractionDetector | Trigger-based, angle-weighted target selection. Allocation-free null cleanup (manual backward for-loop). MinDotThreshold=0.3f (~72°) prevents targeting behind player. Debug.Log wrapped in #if UNITY_EDITOR. Events: OnPromptChanged, OnPromptHidden. Uses `GetComponentInParent<InteractableBase>()`. |
 
 ### World Objects — `Assets/Scripts/Objects/`
 
 | File | Class | Purpose |
 |------|-------|---------|
-| `PickupObject.cs` | PickupObject | Carriable items. Weight, stackable, throw. |
-| `PushableObject.cs` | PushableObject | Push/pull physics objects. Friction, canPull. |
-| `ClimbSurface.cs` | ClimbSurface | Climbable surfaces. |
+| `PickupObject.cs` | PickupObject | Carriable items. Smooth lerp pickup (0.2s ease-out LerpToCarryPoint coroutine). Weight affects throw distance. Optional audio: pickupSound, dropSound, throwSound via AudioSource.PlayClipAtPoint(). CancelLerp() on Drop/Throw. |
+| `PushableObject.cs` | PushableObject | Push/pull physics objects. Friction scales push speed (1/(1+friction)). canPull flag enforced by PushPullState. Dynamic prompt ("Push / Pull" vs "Push"). Optional push loop audio (3D spatial, loops during push). PlayPushLoop()/StopPushLoop() public API. RigidbodyConstraints.FreezeRotation. |
+| `ClimbSurface.cs` | ClimbSurface | Climbable surfaces. climbHeight field enforced by ClimbState (caps upward movement). SurfaceNormal for lateral boundary checking. |
+
+### VFX — `Assets/Scripts/VFX/`
+
+| File | Class | Purpose |
+|------|-------|---------|
+| `SparkleVFX.cs` | SparkleVFX | Code-configured ParticleSystem burst. Faded yellow orbs (25 particles, 0.8s, alpha fade + shrink). Auto-deactivates for pooling. Play()/Play(Vector3). |
+| `SparkleVFXManager.cs` | SparkleVFXManager | Singleton pool/spawner (default 5 instances). PlayAt(pos), PlayAtTransform(target), PlayAtPlayer(). Auto-expands pool. |
 
 ### Environment — `Assets/Scripts/Environment/`
 
@@ -132,18 +139,22 @@
 
 | File | Class | Purpose |
 |------|-------|---------|
-| `DialogueUI.cs` | DialogueUI | Dialogue panel with typewriter effect. Spawns ChoiceButtonUI from prefab. Handles Z/X/C and E/Space input. |
-| `ChoiceButtonUI.cs` | ChoiceButtonUI | Choice button with style colors (Empathetic=orange, Selfish=dark, Neutral=white). Shows lock reasons from both legacy and extensible conditions. |
-| `KarmaFlowerUI.cs` | KarmaFlowerUI | Flower of Life display. Petal bloom on level-up. Progress bar. |
-| `CoinCounterUI.cs` | CoinCounterUI | Coin icon + text. Delta popup animations (+green, -red). |
-| `KarmaPopupUI.cs` | KarmaPopupUI | Floating "+50 Karma" text that fades out. |
-| `HUDManager.cs` | HUDManager | Top-level HUD coordination. |
+| `DialogueUI.cs` | DialogueUI | Player bottom panel (700px fixed-width centered). Three modes: NPC-no-choices (panel hidden), NPC-with-choices (ghost panel — visuals hidden, only floating choice buttons), Player speaking (full panel). Typewriter effect. Z/X/C choices + Enter/E/Space advance. Player choice flow: highlight → player panel with "Sammy" badge → confirm → NPC response. Caches panelBorderImage + innerPanelObj for ghost panel mode. TrySubscribe + Start() fallback. |
+| `ChoiceButtonUI.cs` | ChoiceButtonUI | Choice button with style colors (Empathetic=orange, Selfish=dark, Neutral=white). Shows lock reasons. SetSelected() for visual highlight on choice selection. |
+| `KarmaFlowerUI.cs` | KarmaFlowerUI | Flower of Life display. Petal bloom on level-up. LevelUpFlash overlay. Animated progress bar fill with green flash (barGainColor) + ease-out curve. Runtime Image.Type.Filled enforcement in OnEnable. TrySubscribe + Start() fallback for KarmaManager subscription timing. |
+| `CoinCounterUI.cs` | CoinCounterUI | Coin icon + text. Delta popup animations (+green, -red). AudioSource for coin sounds. |
+| `KarmaPopupUI.cs` | KarmaPopupUI | 3-phase fly-to-target animation: pop-in (scale 0→1.3→1) → pause → fly to KarmaFlower (ease-in). Green color for gains, red for losses. PunchTargetCoroutine on landing. TrySubscribe + Start() fallback. |
+| `CoinFlyUI.cs` | CoinFlyUI | Spawns 3 gold circle Images at screen center. Pop-in → pause → stagger-fly to CoinCounter (ease-in-out). Only for positive deltas. PunchTargetCoroutine on last coin. TrySubscribe + Start() fallback. |
+| `NPCSpeechBubble.cs` | NPCSpeechBubble | World-space speech bubble above NPCs at worldOffset (0,5,0). Dynamic height from renderer bounds + heightPadding=0.2. Brown name badge + speech text. Auto-billboards to camera. Typewriter effect (useTypewriter=true, 35 chars/sec) with IsTypewriting/SkipTypewriter() API for DialogueUI coordination. Continue prompt "Press Enter >>" shown after typewriter finishes. Fade in/out animation. Auto-migration for worldOffset, prompt text, heightPadding. TrySubscribe + Start() fallback. |
+| `ResetGameButton.cs` | ResetGameButton | Resets karma/coins/VariableStore, clears DialogueManager.rewardedChoices, and reloads scene. Managers survive via DontDestroyOnLoad, reset state before reload. |
+| `FPSCounter.cs` | FPSCounter | Debug FPS display (top-right corner). |
+| `HUDManager.cs` | HUDManager | Top-level HUD coordination. Bridges manager events to UI. Subscribes to InteractionDetector for "Press E" prompt. |
 
 ### Other Scripts — `Assets/Scripts/`
 
 | File | Class | Purpose |
 |------|-------|---------|
-| `ThirdPersonCamera.cs` | ThirdPersonCamera | Camera follow. |
+| `ThirdPersonCamera.cs` | ThirdPersonCamera | CameraRig parent with child Main Camera. Two modes: Follow (rig at player, rotation matches player Y) + Dialogue (rig at player, rotates toward NPC — child offset creates over-the-shoulder shot). Subscribes to DialogueManager events via TrySubscribe. |
 | `SkyboxController.cs` | SkyboxController | Day/night skybox cycle. |
 | `SernaAnimCycler.cs` | SernaAnimCycler | Serna idle/talk animation variant cycling (3 idles, 3 talks). |
 | `SernaInteraction.cs` | SernaInteraction | **LEGACY** — replaced by DialogueNPC. |
@@ -154,7 +165,9 @@
 
 | File | Class | Menu Item | Purpose |
 |------|-------|-----------|---------|
-| `GameSystemsSetup.cs` | GameSystemsSetup | Karma > Setup Game Systems, Karma > Quick Setup Checklist | Auto-creates GameManagers with all singletons. Validates Player/Serna. |
+| `GameSystemsSetup.cs` | GameSystemsSetup | Karma > Setup Game Systems, Karma > Quick Setup Checklist | Auto-creates GameManagers with all singletons (incl. SparkleVFXManager). Validates Player/Serna. Auto-assigns SparkleVFX prefab. |
+| `VFXPrefabCreator.cs` | VFXPrefabCreator | Karma > Create Sparkle VFX Prefab | Creates SparkleVFX prefab at Assets/Prefab/VFX/. Auto-assigns to SparkleVFXManager in scene. |
+| `UISetupTool.cs` | UISetupTool | Karma > Build UI Canvases, Build HUD/Dialogue Canvas Only | Programmatic Canvas builder matching HUDCanvas.prefab layout. Creates HUDCanvas (sort 5) + DialogueCanvas (sort 10) + ChoiceButton prefab. GUID-based sprite/audio loading. BuildHUDCanvasOnly re-wires HUDManager via WireHUDManagerToHUD. Auto-wires all references. |
 | `PlayerAnimatorSetup.cs` | PlayerAnimatorSetup | Karma > Rebuild Player Animator | Rebuilds PlayerAnimatorController with all states/transitions. |
 | `PlayerSetupValidator.cs` | PlayerSetupValidator | Karma > Validate Player Setup | Checks player components, tag, animator. |
 | `DialogueDataCreator.cs` | DialogueDataCreator | Karma > Create Serna Intro/Return Dialogue, Karma > Create Karma Config, Karma > Create Variable Store | Creates sample dialogue assets with extensible actions. |
@@ -181,20 +194,53 @@
 ## Key System Flows
 
 ### Karma Flow
-1. Player makes choice → triggers ModifyKarmaAction
+1. Player makes choice → triggers ModifyKarmaAction (one-time per choice via runtime HashSet)
 2. KarmaManager.AddKarma(amount) → plays audio feedback
-3. OnKarmaChanged event → KarmaFlowerUI updates progress bar, KarmaPopupUI shows "+50"
-4. If level crosses threshold → OnKarmaLevelUp → petal bloom animation
-5. KarmaManager.GetNormalizedKarma() (0.0-1.0) available for NPC behavior
+3. OnKarmaChanged event → KarmaFlowerUI updates progress bar (animated fill with green flash), KarmaPopupUI shows "+50" then flies to KarmaFlower
+4. If coins also awarded → CoinFlyUI spawns 3 coins that fly to CoinCounter
+5. If level crosses threshold → OnKarmaLevelUp → petal bloom + LevelUpFlash overlay
+6. KarmaManager.GetNormalizedKarma() (0.0-1.0) available for NPC behavior
 
 ### Dialogue Flow
 1. Player approaches NPC → InteractionDetector targets DialogueNPC
 2. E key → GroundedState calls InteractionDetector → DialogueNPC.Interact()
-3. DialogueManager.StartDialogue(dialogueSO) → disables player input
-4. ShowNode(): evaluates conditions → skips if fail → executes onShowActions → fires OnNodeChanged
-5. DialogueUI shows speaker + text (typewriter) + spawns ChoiceButtonUI if choices exist
-6. Player presses Z/X/C → SelectChoice() → executes legacy karma/coins + extensible actions[] → advances
-7. EndDialogue() → re-enables player input → fires OnDialogueEnded
+3. DialogueNPC sets ActiveNPCTransform + ActiveNPCSpeakerName, both characters face each other
+4. DialogueManager.StartDialogue(dialogueSO) → disables player input → fires OnDialogueStarted
+5. ThirdPersonCamera enters dialogue mode (rig rotates toward NPC → over-the-shoulder shot)
+6. ShowNode(): evaluates conditions → skips if fail → executes onShowActions → fires OnNodeChanged
+7. DialogueNPC.HandleNodeChanged: plays per-node voiceClip + nodeAnimation (if set, pauses SernaAnimCycler and CrossFades to clip)
+8. **NPC line (no choices)**: NPCSpeechBubble typewriters text in bubble above NPC. "Press Enter >>" shown after typewriter finishes. Bottom panel hidden.
+9. **NPC line (with choices)**: NPCSpeechBubble typewriters question text. DialogueUI enters "ghost panel" mode — panel active but border/inner panel hidden, only floating ChoiceButtonUI instances visible.
+10. Player presses Z/X/C → highlight delay → choice text typewriters in player bottom panel with "Sammy" badge → Enter to confirm → SelectChoice() fires → karma/coins applied → if Empathetic choice → SparkleVFX auto-bursts at player → NPC response in bubble
+11. Player presses Enter/E/Space to advance non-choice nodes (first press skips bubble typewriter, second press advances)
+12. EndDialogue() → re-enables player input → camera returns to follow mode → fires OnDialogueEnded → DialogueNPC re-enables SernaAnimCycler
+
+### World Object Interaction Flows
+
+**Pickup/Carry/Throw:**
+1. Player approaches PickupObject → InteractionDetector targets it (QuickOutline auto-highlights)
+2. E key → PickupObject.Interact() → sets interactionTarget → CarryState
+3. CarryState.Enter() → starts LerpToCarryPoint() coroutine (0.2s ease-out smooth pickup) → plays pickupSound
+4. While carrying: reduced speed, can interact with other objects
+5. E to drop → FindSafeDropPosition() SphereCasts forward/right/left/behind/feet → plays dropSound
+6. Left-click to throw → effectiveForce = throwForce / Max(weight, 0.1f) → plays throwSound
+
+**Push/Pull:**
+1. Player approaches PushableObject → QuickOutline highlights, prompt shows "Push / Pull" or "Push"
+2. E key → PushPullState.Enter() → AlignToNearestFace() snaps player to nearest ±X/±Z face
+3. Forward input pushes, backward pulls (if canPull=true, else blocked)
+4. Speed scaled by friction: effectiveSpeed = pushPullSpeed * 1/(1+friction)
+5. Push audio loops while input active, stops when idle
+6. Fall off edge → AirborneState. E to release → GroundedState
+
+**Climb:**
+1. Player approaches ClimbSurface → QuickOutline highlights
+2. E key → ClimbState.Enter() → zeroes velocity, tracks startY
+3. Vertical input moves up/down at player.climbSpeed
+4. climbHeight enforced: blocks upward movement at max height above startY
+5. Lateral boundary: IsOnSurface() raycast check, nudges back if off-surface
+6. Jump off (Space) → push away from wall. Crouch to drop. Down past startY → let go
+7. ReachedLedgeTop() → vault over with push
 
 ### Adding Future Systems (Zero Core Changes)
 ```csharp
@@ -265,7 +311,7 @@ Assets/
 ## Dependencies
 - **New Input System** (PlayerInputHandler)
 - **TextMesh Pro** (all UI text)
-- **QuickOutline** (NPC highlighting, `Assets/Animation/QuickOutline/`)
+- **QuickOutline** (NPC + world object highlighting, `Assets/Animation/QuickOutline/`, class: `QuickOutline`)
 - **NavMesh** (GhostNPC movement)
 - **URP** (rendering, skybox)
 - **Boxophobic Utils** (styled inspectors)
@@ -275,6 +321,9 @@ Assets/
 
 ## Unity Menu Items (All under "Karma" menu)
 - Setup Game Systems — auto-creates GameManagers with all singletons
+- Build UI Canvases — builds HUDCanvas + DialogueCanvas + ChoiceButton prefab from Figma mockups
+- Build HUD Canvas Only — just the HUD canvas
+- Build Dialogue Canvas Only — just the dialogue canvas
 - Quick Setup Checklist — prints full setup guide
 - Create Karma Config — creates KarmaConfig asset
 - Create Variable Store — creates VariableStore asset
@@ -285,10 +334,106 @@ Assets/
 - Dialogue Editor — visual dialogue tree editor window
 - Variable Store — game variable browser/inspector
 
+## UI Canvas Hierarchy (built by UISetupTool)
+
+```
+HUDCanvas (Screen Space Overlay, Sort Order 5)
+├── InteractionPrompt (bottom-center, hidden)
+│   └── PromptText ("Press E to pick up")
+├── KarmaFlower (top-left, 273.9×80, matches HUDCanvas.prefab)
+│   ├── FlowerIcon (sprite by GUID, center-left anchor)
+│   ├── ProgressBarBg (sprite, bottom-anchored, 27.1px tall)
+│   │   └── ProgressBarFill (sprite, 6px inset, Filled horizontal)
+│   ├── LevelText ("Lv.0", left of center)
+│   ├── KarmaScoreText ("167", below center)
+│   ├── LevelUpFlash (fullscreen overlay, hidden)
+│   └── KarmaFlowerUI (auto-wired, audio clips by GUID)
+├── CoinCounter (top-left, below KarmaFlower, anchoredPos 155,-141.8)
+│   ├── CoinIcon (sprite by GUID) + CoinText + DeltaPopup
+│   ├── AudioSource (for coin sounds)
+│   └── CoinCounterUI (auto-wired)
+├── KarmaPopup (center, flies to KarmaFlower)
+│   └── KarmaPopupText + KarmaPopupUI (3-phase fly animation)
+├── CoinFlyUI (center, 3 coins fly to CoinCounter)
+│   └── CoinFlyUI component (stagger-fly animation)
+├── FPSCounter (top-right corner)
+└── ResetButton (bottom-right, "Reset Game")
+
+DialogueCanvas (Screen Space Overlay, Sort Order 10)
+└── DialoguePanel (bottom-center, 700px fixed-width, orange border + cream bg, inactive)
+    ├── InnerPanel (cream bg with 3px border inset)
+    │   ├── DialogueTextArea → DialogueText (typewriter narration)
+    │   └── ContinuePrompt ("Press Enter to continue ▶", hidden)
+    ├── SpeakerBadge (brown, top-left, overlapping border)
+    │   └── SpeakerNameText ("Serna" or "Sammy")
+    └── ChoiceContainer (vertical layout, fixed-width centered ABOVE panel, hidden)
+        └── [spawned ChoiceButton instances]
+
+    Ghost Panel Mode: panel active but panelBorderImage.enabled=false + InnerPanel hidden
+                      Only ChoiceContainer renders as floating choice buttons
+
+NPC Speech Bubble (World Space Canvas, child of NPC)
+└── NPCSpeechBubble component on canvas
+    └── BubblePanel (auto-built if not pre-assigned)
+        ├── NameBadge (brown) → SpeakerName
+        ├── SpeechText (white, max 80 chars)
+        └── ContinuePrompt ("Press Enter ▶", italic, right-aligned)
+
+ChoiceButton Prefab (Assets/Prefab/UI/ChoiceButton.prefab)
+├── Background (Image, neutral cream default)
+├── InputBadge (orange circle)
+│   └── BadgeText ("Z"/"X"/"C")
+├── ChoiceText ("Choice description here")
+└── ChoiceButtonUI + Button (auto-wired)
+```
+
 ---
 
 ## Teammate Note
-UI integration and visual polish for the dialogue system is handled by a teammate on `feature/UI` branch — don't touch files they're working on.
+Teammate's `feature/UI` branch work is NOT being used. Fresh UI implementation built from Figma mockups using UISetupTool.
+
+## Critical Architecture Notes
+
+### Camera Rig Architecture
+```
+CameraRig (ThirdPersonCamera script here)
+  └── Main Camera (Camera + AudioListener + URP — child with local offset)
+```
+- ThirdPersonCamera manipulates the **CameraRig** transform (position + rotation)
+- The child Main Camera's local offset creates the 3rd-person / over-the-shoulder view
+- **NEVER** directly reposition the rig to a custom position during dialogue — just rotate it toward the NPC. The child offset handles everything.
+
+### Event Subscription Timing Pattern
+All UI/camera scripts that depend on singleton managers use this pattern:
+```csharp
+private bool isSubscribed;
+void OnEnable() { TrySubscribe(); }
+void Start() { TrySubscribe(); } // Fallback: singleton may be null during OnEnable
+private void TrySubscribe() {
+    if (isSubscribed) return;
+    if (Manager.Instance == null) return;
+    Manager.Instance.OnEvent += Handler;
+    isSubscribed = true;
+}
+```
+Used in: DialogueUI, NPCSpeechBubble, KarmaFlowerUI, ThirdPersonCamera
+
+### Unity Serialization Gotcha
+Changing a field's default value in code does NOT update already-serialized Inspector values on scene instances. Fix: add auto-migration in Awake():
+```csharp
+if (worldOffset.y <= 3f) worldOffset = new Vector3(0f, 5f, 0f);
+if (heightPadding >= 0.5f) heightPadding = 0.2f;
+```
+
+### BuildHUDCanvasOnly Must Re-Wire HUDManager
+Rebuilding HUDCanvas destroys old GameObjects, breaking HUDManager's serialized references (interactionPromptPanel, karmaFlowerUI, etc.). Fix: `BuildHUDCanvasOnly` calls `WireHUDManagerToHUD(hudCanvas)` which re-wires all HUD-related fields on HUDManager.
+
+## Performance Optimizations Applied
+- **PlayerAnimationHandler**: HashSet<int> validParams replaces try-catch on every SetBool/SetFloat/SetTrigger call (~10+/frame). Cached once in Awake().
+- **InteractionDetector**: Manual backward for-loop replaces `RemoveAll(lambda)` — zero per-frame delegate allocation. MinDotThreshold filtering.
+- **InteractableBase**: Lazy QuickOutline lookup with `outlineLookedUp` flag — avoids repeated GetComponentInChildren calls.
+- **DialogueManager**: Runtime HashSet<string> for one-time rewards instead of ScriptableObject persistence (VariableStore changes in Play Mode persisted in editor).
+- **All Debug.Log calls** in InteractionDetector wrapped in `#if UNITY_EDITOR`.
 
 ## What's Next (Planned)
 - Reflection Card system (IDialogueAction extension)

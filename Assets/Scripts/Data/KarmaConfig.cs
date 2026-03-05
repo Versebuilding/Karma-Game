@@ -18,7 +18,7 @@ public class KarmaConfig : ScriptableObject
     [Range(100, 5000)] public int xpPerLevel = 500;
 
     [Tooltip("Starting karma points for new game")]
-    public int startingKarma = 0;
+    public int startingKarma = 167; // ~1/3 of 500 xpPerLevel
 
     [Header("Flower of Life Visuals")]
     [Tooltip("Sprite for the unlit flower base (empty state)")]

@@ -5,10 +5,16 @@ using UnityEngine;
 /// <summary>
 /// Detects nearby interactable objects using a trigger SphereCollider.
 /// Selects the best target based on angle to the player's forward direction.
+///
+/// Optimization: Uses manual backward loop for null cleanup (no delegate allocation).
+/// Minimum dot threshold prevents targeting objects behind the player.
 /// </summary>
 public class InteractionDetector : MonoBehaviour
 {
     [SerializeField] private float detectionRadius = 4f;
+
+    /// <summary>Minimum dot product to consider a target (prevents targeting behind player).</summary>
+    private const float MinDotThreshold = 0.3f; // ~72 degrees from forward
 
     /// <summary>The current best interactable target, or null.</summary>
     public InteractableBase CurrentTarget { get; private set; }
@@ -29,30 +35,63 @@ public class InteractionDetector : MonoBehaviour
         var col = gameObject.AddComponent<SphereCollider>();
         col.isTrigger = true;
         col.radius = detectionRadius;
+
+        // Kinematic Rigidbody needed for trigger events to fire.
+        // Without it, this trigger collider is "static" and won't detect
+        // other static colliders (like NPCs without Rigidbodies).
+        var rb = gameObject.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
     }
 
     void OnTriggerEnter(Collider other)
     {
-        var interactable = other.GetComponent<InteractableBase>();
+        var interactable = other.GetComponentInParent<InteractableBase>();
         if (interactable != null && !inRange.Contains(interactable))
+        {
             inRange.Add(interactable);
+#if UNITY_EDITOR
+            Debug.Log($"InteractionDetector: '{interactable.name}' entered range (total: {inRange.Count})");
+#endif
+        }
     }
 
     void OnTriggerExit(Collider other)
     {
-        var interactable = other.GetComponent<InteractableBase>();
+        var interactable = other.GetComponentInParent<InteractableBase>();
         if (interactable != null)
+        {
             inRange.Remove(interactable);
+#if UNITY_EDITOR
+            Debug.Log($"InteractionDetector: '{interactable.name}' exited range (total: {inRange.Count})");
+#endif
+        }
+    }
+
+    void Start()
+    {
+        if (player == null)
+            Debug.LogWarning("InteractionDetector: No PlayerController found in parent!");
+
+#if UNITY_EDITOR
+        var col = GetComponent<SphereCollider>();
+        var rb = GetComponent<Rigidbody>();
+        Debug.Log($"InteractionDetector: Ready — SphereCollider(trigger={col?.isTrigger}, radius={col?.radius}), Rigidbody(kinematic={rb?.isKinematic}), player={(player != null ? player.name : "NULL")}");
+#endif
     }
 
     void Update()
     {
-        // Clean up destroyed objects
-        inRange.RemoveAll(item => item == null);
+        // Clean up destroyed objects (allocation-free backward loop)
+        for (int i = inRange.Count - 1; i >= 0; i--)
+        {
+            if (inRange[i] == null)
+                inRange.RemoveAt(i);
+        }
 
-        // Find best target: closest angle to player forward
+        // Find best target: closest angle to player forward, above minimum threshold
         InteractableBase best = null;
-        float bestScore = -1f;
+        float bestScore = MinDotThreshold; // must exceed threshold to be considered
 
         foreach (var candidate in inRange)
         {

@@ -67,6 +67,8 @@ public class ChoiceButtonUI : MonoBehaviour
     // ─── Runtime ──────────────────────────────────────────────
     private int choiceIndex;
     private bool isAvailable;
+    private ChoiceStyle currentStyle;
+    private bool isSelected;
 
     // ─── Public API ───────────────────────────────────────────
 
@@ -98,6 +100,8 @@ public class ChoiceButtonUI : MonoBehaviour
         }
 
         // Apply style colors
+        currentStyle = choice.choiceStyle;
+        isSelected = false;
         ApplyStyle(choice.choiceStyle, available);
 
         // Wire up button click
@@ -140,6 +144,55 @@ public class ChoiceButtonUI : MonoBehaviour
         }
 
         return "Locked";
+    }
+
+    // ─── Selection State ────────────────────────────────────
+
+    /// <summary>
+    /// Show this choice as selected (fills with style color, used for visual feedback).
+    /// Matches Figma mockup: selected empathetic choice turns fully orange.
+    /// </summary>
+    public void SetSelected(bool selected)
+    {
+        isSelected = selected;
+        if (!isAvailable) return;
+
+        if (selected)
+        {
+            // Full color fill when selected
+            Color selectedBg;
+            switch (currentStyle)
+            {
+                case ChoiceStyle.Empathetic:
+                    selectedBg = empatheticColor;
+                    break;
+                case ChoiceStyle.Selfish:
+                    selectedBg = selfishColor;
+                    break;
+                default:
+                    selectedBg = new Color(0.85f, 0.82f, 0.78f, 1f);
+                    break;
+            }
+
+            if (backgroundImage != null)
+                backgroundImage.color = selectedBg;
+
+            // White text when selected
+            if (choiceText != null)
+                choiceText.color = currentStyle == ChoiceStyle.Neutral
+                    ? neutralTextColor : Color.white;
+
+            // Badge stays orange/dark
+            if (inputLabelBadge != null)
+                inputLabelBadge.color = currentStyle == ChoiceStyle.Empathetic
+                    ? new Color(0.85f, 0.5f, 0.1f, 1f) // darker orange for contrast
+                    : empatheticColor;
+        }
+        else
+        {
+            // Restore default style
+            ApplyStyle(currentStyle, isAvailable);
+        }
     }
 
     // ─── Style Application ────────────────────────────────────

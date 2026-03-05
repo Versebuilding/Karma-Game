@@ -87,15 +87,19 @@ public class CoinCounterUI : MonoBehaviour
             audioSource = GetComponent<AudioSource>();
     }
 
+    private bool isSubscribed;
+
     void OnEnable()
     {
-        if (WalletManager.Instance != null)
-        {
-            WalletManager.Instance.OnCoinsChanged += HandleCoinsChanged;
+        TrySubscribe();
+    }
 
-            // Initialize display
-            UpdateCoinDisplay(WalletManager.Instance.Coins);
-        }
+    void Start()
+    {
+        // Fallback: if WalletManager.Instance was null during OnEnable
+        // (common when HUDCanvas initializes before GameManagers),
+        // subscribe now — all Awakes have run by Start time.
+        TrySubscribe();
     }
 
     void OnDisable()
@@ -103,6 +107,22 @@ public class CoinCounterUI : MonoBehaviour
         if (WalletManager.Instance != null)
         {
             WalletManager.Instance.OnCoinsChanged -= HandleCoinsChanged;
+        }
+        isSubscribed = false;
+    }
+
+    private void TrySubscribe()
+    {
+        if (isSubscribed) return;
+
+        if (WalletManager.Instance != null)
+        {
+            WalletManager.Instance.OnCoinsChanged += HandleCoinsChanged;
+
+            // Initialize display with current coins (including starting coins)
+            UpdateCoinDisplay(WalletManager.Instance.Coins);
+            isSubscribed = true;
+            Debug.Log($"CoinCounterUI: Subscribed. Coins = {WalletManager.Instance.Coins}");
         }
     }
 

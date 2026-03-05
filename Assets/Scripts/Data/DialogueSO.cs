@@ -57,6 +57,12 @@ public class DialogueNode
     [TextArea(2, 5)]
     public string dialogueText;
 
+    [Tooltip("Voice clip to play when this node is shown (optional)")]
+    public AudioClip voiceClip;
+
+    [Tooltip("Animation clip to play on the NPC when this node is shown (optional). Overrides default animation until next node. Clip must exist as a state in the NPC's Animator Controller.")]
+    public AnimationClip nodeAnimation;
+
     [Tooltip("Player choices. Leave empty for auto-advance / click-to-continue nodes.")]
     public DialogueChoice[] choices;
 

@@ -190,6 +190,14 @@ public class DialogueSOEditor : Editor
             textProp.stringValue = EditorGUILayout.TextArea(textProp.stringValue,
                 DialogueEditorStyles.DialogueText, GUILayout.MinHeight(50));
 
+            // Voice clip (per-node audio)
+            EditorGUILayout.PropertyField(nodeProp.FindPropertyRelative("voiceClip"),
+                new GUIContent("Voice Clip"));
+
+            // Per-node animation (optional override — plays on NPC until next node)
+            EditorGUILayout.PropertyField(nodeProp.FindPropertyRelative("nodeAnimation"),
+                new GUIContent("Node Animation"));
+
             EditorGUILayout.Space(4);
 
             // Conditions
@@ -290,7 +298,8 @@ public class DialogueSOEditor : Editor
         EditorGUILayout.BeginHorizontal();
 
         // Expand toggle
-        bool newExpanded = EditorGUILayout.Foldout(isExpanded, "", true, GUILayout.Width(15));
+        GUILayout.Space(15);
+        bool newExpanded = EditorGUILayout.Foldout(isExpanded, "", true);
         if (newExpanded != isExpanded)
         {
             if (newExpanded) expandedChoices.Add(choiceKey);

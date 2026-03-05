@@ -82,6 +82,17 @@ public class DialogueNPC : InteractableBase
     [Tooltip("Animator bool parameter name for talking state")]
     [SerializeField] private string talkingBoolParam = "isTalking";
 
+    [Header("Default Animations")]
+    [Tooltip("Default idle animation clips (cycled when not in dialogue). Leave empty to use SernaAnimCycler.")]
+    [SerializeField] private AnimationClip[] defaultIdleClips;
+
+    [Tooltip("Default talking animation clips (cycled during dialogue when no per-node animation). Leave empty to use SernaAnimCycler.")]
+    [SerializeField] private AnimationClip[] defaultTalkClips;
+
+    [Tooltip("Seconds between default animation variant changes")]
+    [Range(1f, 10f)]
+    [SerializeField] private float defaultAnimChangeInterval = 3.5f;
+
     // ─── Audio ────────────────────────────────────────────────
     [Header("Audio")]
     [Tooltip("AudioSource for ambient talk sounds (auto-found)")]
@@ -103,6 +114,16 @@ public class DialogueNPC : InteractableBase
     private bool isTargeted;
     private Transform playerTransform;
     private Coroutine voiceFadeCoroutine;
+    private Coroutine defaultAnimCoroutine;
+    private float dialogueEndTime;
+    private bool isPlayingNodeAnimation; // true when per-node override is active
+
+    /// <summary>
+    /// Grace period (seconds) after dialogue ends before re-interaction is allowed.
+    /// Prevents the Enter key that advanced the last dialogue line from
+    /// immediately re-triggering the conversation.
+    /// </summary>
+    private const float INTERACTION_COOLDOWN = 0.5f;
 
     // ─── Properties ───────────────────────────────────────────
 
@@ -143,32 +164,54 @@ public class DialogueNPC : InteractableBase
         // Start in idle (not talking)
         if (animCycler != null)
             animCycler.SetTalking(false);
+
+        // Fallback subscription if DialogueManager wasn't ready in OnEnable
+        TrySubscribeToDialogueManager();
     }
+
+    private bool isSubscribedToDialogueManager;
 
     void OnEnable()
     {
-        // Subscribe to dialogue events
-        if (DialogueManager.Instance != null)
-        {
-            DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
-        }
+        TrySubscribeToDialogueManager();
     }
 
     void OnDisable()
     {
-        // Unsubscribe
+        UnsubscribeFromDialogueManager();
+    }
+
+    private void TrySubscribeToDialogueManager()
+    {
+        if (isSubscribedToDialogueManager) return;
+
         if (DialogueManager.Instance != null)
         {
+            DialogueManager.Instance.OnNodeChanged += HandleNodeChanged;
+            DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
+            isSubscribedToDialogueManager = true;
+        }
+    }
+
+    private void UnsubscribeFromDialogueManager()
+    {
+        if (!isSubscribedToDialogueManager) return;
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.OnNodeChanged -= HandleNodeChanged;
             DialogueManager.Instance.OnDialogueEnded -= HandleDialogueEnded;
         }
+        isSubscribedToDialogueManager = false;
     }
 
     void Update()
     {
-        // Face player during dialogue
+        // Both NPC and player face each other during dialogue
         if (isInDialogue && facePlayerDuringDialogue && playerTransform != null)
         {
-            FaceTarget(playerTransform);
+            FaceTarget(playerTransform);          // NPC faces player
+            FacePlayerTowardNPC(playerTransform);  // Player faces NPC
         }
 
         // Pulse outline when targeted (not in dialogue)
@@ -193,12 +236,17 @@ public class DialogueNPC : InteractableBase
 
     // ─── IInteractable / InteractableBase ─────────────────────
 
-    /// <summary>Can interact only if a dialogue is assigned and no dialogue is active.</summary>
+    /// <summary>Can interact only if a dialogue is assigned, no dialogue is active, and cooldown has passed.</summary>
     public override bool CanInteract(PlayerController player)
     {
         if (dialogue == null) return false;
         if (DialogueManager.Instance == null) return false;
         if (DialogueManager.Instance.IsDialogueActive) return false;
+
+        // Cooldown after dialogue ends — prevents the Enter key that advanced
+        // the last dialogue line from immediately re-triggering interaction
+        if (Time.time - dialogueEndTime < INTERACTION_COOLDOWN) return false;
+
         return true;
     }
 
@@ -210,6 +258,9 @@ public class DialogueNPC : InteractableBase
         isInDialogue = true;
         playerTransform = player.transform;
 
+        // Set active NPC transform so camera can frame the dialogue
+        DialogueManager.Instance.ActiveNPCTransform = transform;
+
         // Hide outline during dialogue
         if (outline != null)
             outline.enabled = false;
@@ -219,6 +270,11 @@ public class DialogueNPC : InteractableBase
 
         // Fade in ambient voice
         FadeInVoice();
+
+        // Set the NPC speaker name so UI can route NPC lines vs player lines
+        DialogueNode startNode = dialogue.GetStartNode();
+        DialogueManager.Instance.ActiveNPCSpeakerName =
+            startNode != null ? startNode.speakerName : gameObject.name;
 
         // Start the dialogue tree
         DialogueManager.Instance.StartDialogue(dialogue);
@@ -250,14 +306,77 @@ public class DialogueNPC : InteractableBase
 
     // ─── Dialogue Event Handlers ──────────────────────────────
 
+    private void HandleNodeChanged(DialogueNode node)
+    {
+        if (!isInDialogue || node == null) return;
+
+        // Only react if this NPC is the active speaker
+        if (DialogueManager.Instance == null) return;
+        string activeName = DialogueManager.Instance.ActiveNPCSpeakerName;
+        bool isThisNPC = !string.IsNullOrEmpty(activeName)
+            && string.Equals(activeName, node.speakerName, System.StringComparison.OrdinalIgnoreCase);
+
+        if (!isThisNPC) return;
+
+        // Play per-node voice clip (stop previous to avoid overlap)
+        if (voiceSource != null)
+        {
+            voiceSource.Stop();
+
+            if (node.voiceClip != null)
+            {
+                voiceSource.loop = false;
+                voiceSource.clip = node.voiceClip;
+                voiceSource.volume = maxVoiceVolume;
+                voiceSource.Play();
+            }
+            else if (talkAmbientClip != null)
+            {
+                // Fallback: resume ambient murmur if no per-node clip
+                voiceSource.clip = talkAmbientClip;
+                voiceSource.loop = true;
+                voiceSource.volume = maxVoiceVolume;
+                voiceSource.Play();
+            }
+        }
+
+        // Per-node animation override (if set)
+        if (node.nodeAnimation != null)
+        {
+            // Pause default cycling so it doesn't fight with the override
+            StopDefaultAnimCycling();
+            if (animCycler != null)
+                animCycler.enabled = false;
+
+            // Play the specific animation clip by name
+            // (clip must exist as a state in the NPC's Animator Controller)
+            if (animator != null)
+                animator.CrossFade(node.nodeAnimation.name, 0.25f);
+
+            isPlayingNodeAnimation = true;
+        }
+        else if (isPlayingNodeAnimation)
+        {
+            // Previous node had an override, this one doesn't — resume defaults
+            isPlayingNodeAnimation = false;
+            ResumeDefaultAnimations(true);
+        }
+    }
+
     private void HandleDialogueEnded()
     {
         if (!isInDialogue) return;
 
         isInDialogue = false;
+        isPlayingNodeAnimation = false;
+        dialogueEndTime = Time.time;  // Start cooldown to prevent instant re-trigger
 
-        // Stop talking animation
+        // Stop talking animation + any per-node animation cycling
         StopTalkingAnimation();
+
+        // Re-enable variant cycling if it was paused for per-node animation
+        if (animCycler != null)
+            animCycler.enabled = true;
 
         // Fade out ambient voice
         FadeOutVoice();
@@ -284,7 +403,13 @@ public class DialogueNPC : InteractableBase
 
     private void StartTalkingAnimation()
     {
-        if (animCycler != null)
+        if (defaultTalkClips != null && defaultTalkClips.Length > 0)
+        {
+            // Use explicit clip arrays (overrides SernaAnimCycler)
+            if (animCycler != null) animCycler.enabled = false;
+            StartDefaultAnimCycling(true);
+        }
+        else if (animCycler != null)
         {
             // Use the anim cycler (handles variant cycling for idles/talks)
             animCycler.SetTalking(true);
@@ -298,13 +423,73 @@ public class DialogueNPC : InteractableBase
 
     private void StopTalkingAnimation()
     {
-        if (animCycler != null)
+        StopDefaultAnimCycling();
+
+        if (defaultIdleClips != null && defaultIdleClips.Length > 0)
         {
+            // Return to explicit idle clips
+            StartDefaultAnimCycling(false);
+        }
+        else if (animCycler != null)
+        {
+            animCycler.enabled = true;
             animCycler.SetTalking(false);
         }
         else if (animator != null)
         {
             animator.SetBool(talkingBoolParam, false);
+        }
+    }
+
+    /// <summary>
+    /// Resume default animations after a per-node override ends.
+    /// </summary>
+    private void ResumeDefaultAnimations(bool talking)
+    {
+        if (talking && defaultTalkClips != null && defaultTalkClips.Length > 0)
+        {
+            StartDefaultAnimCycling(true);
+        }
+        else if (animCycler != null)
+        {
+            animCycler.enabled = true;
+            if (talking) animCycler.SetTalking(true);
+        }
+    }
+
+    // ─── Default Animation Cycling ───────────────────────────
+
+    private void StartDefaultAnimCycling(bool talking)
+    {
+        StopDefaultAnimCycling();
+
+        AnimationClip[] clips = talking ? defaultTalkClips : defaultIdleClips;
+        if (clips == null || clips.Length == 0 || animator == null) return;
+
+        defaultAnimCoroutine = StartCoroutine(DefaultAnimCycleCoroutine(clips));
+    }
+
+    private void StopDefaultAnimCycling()
+    {
+        if (defaultAnimCoroutine != null)
+        {
+            StopCoroutine(defaultAnimCoroutine);
+            defaultAnimCoroutine = null;
+        }
+    }
+
+    private IEnumerator DefaultAnimCycleCoroutine(AnimationClip[] clips)
+    {
+        int index = 0;
+
+        while (true)
+        {
+            if (clips[index] != null && animator != null)
+                animator.CrossFade(clips[index].name, 0.25f);
+
+            yield return new WaitForSeconds(defaultAnimChangeInterval);
+
+            index = (index + 1) % clips.Length;
         }
     }
 
@@ -320,6 +505,18 @@ public class DialogueNPC : InteractableBase
         Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
         transform.rotation = Quaternion.Slerp(
             transform.rotation, targetRot, facePlayerSpeed * Time.deltaTime);
+    }
+
+    /// <summary>Smoothly rotate the player toward this NPC during dialogue.</summary>
+    private void FacePlayerTowardNPC(Transform player)
+    {
+        Vector3 dir = transform.position - player.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.01f) return;
+
+        Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
+        player.rotation = Quaternion.Slerp(
+            player.rotation, targetRot, facePlayerSpeed * Time.deltaTime);
     }
 
     // ─── Audio Helpers ────────────────────────────────────────

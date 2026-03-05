@@ -95,6 +95,55 @@ public class GameSystemsSetup
             Debug.Log("  HUDManager already attached");
         }
 
+        // Add GhostAtmosphere
+        if (managers.GetComponent<GhostAtmosphere>() == null)
+        {
+            Undo.AddComponent<GhostAtmosphere>(managers);
+            Debug.Log("  + Added GhostAtmosphere");
+        }
+        else
+        {
+            Debug.Log("  GhostAtmosphere already attached");
+        }
+
+        // Add SparkleVFXManager
+        if (managers.GetComponent<SparkleVFXManager>() == null)
+        {
+            Undo.AddComponent<SparkleVFXManager>(managers);
+            Debug.Log("  + Added SparkleVFXManager");
+        }
+        else
+        {
+            Debug.Log("  SparkleVFXManager already attached");
+        }
+
+        // Auto-assign SparkleVFX prefab if it exists
+        var sparkleManager = managers.GetComponent<SparkleVFXManager>();
+        if (sparkleManager != null)
+        {
+            var prefabGuids = AssetDatabase.FindAssets("SparkleVFX t:Prefab");
+            if (prefabGuids.Length > 0)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    AssetDatabase.GUIDToAssetPath(prefabGuids[0]));
+                if (prefab != null)
+                {
+                    var smSo = new SerializedObject(sparkleManager);
+                    var prefabProp = smSo.FindProperty("sparklePrefab");
+                    if (prefabProp != null)
+                    {
+                        prefabProp.objectReferenceValue = prefab;
+                        smSo.ApplyModifiedProperties();
+                        Debug.Log($"  Assigned SparkleVFX prefab: {prefab.name}");
+                    }
+                }
+            }
+            else
+            {
+                Debug.Log("  No SparkleVFX prefab found. Run: Karma > Create Sparkle VFX Prefab");
+            }
+        }
+
         // Try to assign KarmaConfig
         var karmaManager = managers.GetComponent<KarmaManager>();
         if (karmaManager != null)
@@ -161,6 +210,37 @@ public class GameSystemsSetup
         else
         {
             Debug.Log($"  InteractionDetector: OK (on {detector.gameObject.name})");
+
+            // Verify Rigidbody (needed for trigger events to fire)
+            var detectorRb = detector.GetComponent<Rigidbody>();
+            if (detectorRb == null)
+            {
+                Debug.LogWarning("  ! InteractionDetector has no Rigidbody!");
+                Debug.LogWarning("    → InteractionDetector auto-adds one at runtime, but if missing in editor check the script");
+            }
+            else if (!detectorRb.isKinematic)
+            {
+                Debug.LogWarning("  ! InteractionDetector Rigidbody should be kinematic!");
+            }
+            else
+            {
+                Debug.Log("  InteractionDetector Rigidbody: OK (kinematic)");
+            }
+
+            // Verify SphereCollider (trigger)
+            var detectorCol = detector.GetComponent<SphereCollider>();
+            if (detectorCol == null)
+            {
+                Debug.Log("  InteractionDetector SphereCollider: auto-created at runtime");
+            }
+            else if (!detectorCol.isTrigger)
+            {
+                Debug.LogWarning("  ! InteractionDetector SphereCollider must be a trigger!");
+            }
+            else
+            {
+                Debug.Log($"  InteractionDetector SphereCollider: OK (radius={detectorCol.radius})");
+            }
         }
 
         // Check PlayerInputHandler
@@ -261,37 +341,34 @@ public class GameSystemsSetup
 
     private static void PrintCanvasInstructions()
     {
-        Debug.Log("\n── Step 4: UI Canvas Setup (Manual) ──────────────");
-        Debug.Log("  You need to create two Canvases:");
+        Debug.Log("\n── Step 4: UI Canvas Setup ────────────────────────");
+        Debug.Log("  RECOMMENDED: Run 'Karma > Build UI Canvases' to auto-create everything!");
         Debug.Log("");
-        Debug.Log("  A) HUD Canvas (Screen Space - Overlay, Sort Order 5):");
-        Debug.Log("     ├── KarmaFlower (Image + child petal Images)");
-        Debug.Log("     │   └── Attach KarmaFlowerUI script");
-        Debug.Log("     ├── CoinCounter (Image + TMP_Text)");
-        Debug.Log("     │   └── Attach CoinCounterUI script");
-        Debug.Log("     ├── KarmaPopup (TMP_Text, starts hidden)");
-        Debug.Log("     │   └── Attach KarmaPopupUI script");
-        Debug.Log("     └── InteractionPrompt (Panel + TMP_Text, starts hidden)");
+        Debug.Log("  This builds two canvases + ChoiceButton prefab automatically:");
         Debug.Log("");
-        Debug.Log("  B) Dialogue Canvas (Screen Space - Overlay, Sort Order 10):");
-        Debug.Log("     └── DialoguePanel (starts inactive)");
-        Debug.Log("         ├── SpeakerName (TMP_Text)");
-        Debug.Log("         ├── DialogueText (TMP_Text)");
-        Debug.Log("         ├── ChoiceContainer (Vertical Layout Group)");
-        Debug.Log("         ├── ContinuePrompt ('Press E to continue')");
-        Debug.Log("         └── Attach DialogueUI script");
+        Debug.Log("  A) HUDCanvas (Screen Space - Overlay, Sort Order 5):");
+        Debug.Log("     ├── InteractionPrompt (bottom-center, starts hidden)");
+        Debug.Log("     ├── KarmaPopup (center, '↑ Karma Score' style)");
+        Debug.Log("     ├── KarmaFlower (top-left, icon + progress bar)");
+        Debug.Log("     └── CoinCounter (top-right, coin icon + count text)");
         Debug.Log("");
-        Debug.Log("  C) ChoiceButton Prefab (save in Assets/Prefab/UI/):");
-        Debug.Log("     ├── Root: Button + Image (background)");
-        Debug.Log("     ├── InputLabel (TMP_Text — 'Z', 'X', 'C')");
-        Debug.Log("     ├── ChoiceText (TMP_Text — choice description)");
-        Debug.Log("     └── Attach ChoiceButtonUI script");
+        Debug.Log("  B) DialogueCanvas (Screen Space - Overlay, Sort Order 10):");
+        Debug.Log("     └── DialoguePanel (bottom, orange border + cream bg)");
+        Debug.Log("         ├── SpeakerBadge (brown badge with name)");
+        Debug.Log("         ├── DialogueText (narration text area)");
+        Debug.Log("         ├── ChoiceContainer (vertical, above panel)");
+        Debug.Log("         └── ContinuePrompt ('Press E to continue')");
         Debug.Log("");
-        Debug.Log("  After creating Canvases, drag references into:");
-        Debug.Log("     - HUDManager (on GameManagers) → HUD Canvas references");
-        Debug.Log("     - DialogueUI → Dialogue panel references");
-        Debug.Log("     - KarmaFlowerUI → flower/petal/bar references");
-        Debug.Log("     - CoinCounterUI → coin icon/text references");
+        Debug.Log("  C) ChoiceButton Prefab (auto-saved to Assets/Prefab/UI/):");
+        Debug.Log("     ├── InputBadge (orange circle with Z/X/C)");
+        Debug.Log("     ├── ChoiceText (choice description)");
+        Debug.Log("     └── ChoiceButtonUI (auto-wired)");
+        Debug.Log("");
+        Debug.Log("  D) NPC Speech Bubble (optional, on each NPC):");
+        Debug.Log("     └── Add NPCSpeechBubble component to NPC child object");
+        Debug.Log("         (auto-creates world-space canvas with name badge + text)");
+        Debug.Log("");
+        Debug.Log("  All references auto-wired to HUDManager and DialogueUI!");
     }
 
     [MenuItem("Karma/Quick Setup Checklist")]
@@ -303,21 +380,22 @@ public class GameSystemsSetup
         Debug.Log("");
         Debug.Log("  1. [ ] Run: Karma > Create Karma Config");
         Debug.Log("  2. [ ] Run: Karma > Create Serna Intro Dialogue");
-        Debug.Log("  3. [ ] Run: Karma > Setup Game Systems");
-        Debug.Log("  4. [ ] Run: Karma > Rebuild Player Animator");
-        Debug.Log("  5. [ ] Assign KarmaConfig asset to KarmaManager");
-        Debug.Log("  6. [ ] On Serna: Replace SernaInteraction → DialogueNPC");
-        Debug.Log("  7. [ ] On Serna: Assign Serna_Intro dialogue asset");
-        Debug.Log("  8. [ ] On Serna: Ensure she has a Collider (CapsuleCollider)");
-        Debug.Log("  9. [ ] Create HUD Canvas with KarmaFlowerUI, CoinCounterUI");
-        Debug.Log("  10.[ ] Create Dialogue Canvas with DialogueUI");
-        Debug.Log("  11.[ ] Create ChoiceButton prefab with ChoiceButtonUI");
+        Debug.Log("  3. [ ] Run: Karma > Create Variable Store");
+        Debug.Log("  4. [ ] Run: Karma > Setup Game Systems");
+        Debug.Log("  5. [ ] Run: Karma > Build UI Canvases  ← builds everything!");
+        Debug.Log("  6. [ ] Run: Karma > Rebuild Player Animator");
+        Debug.Log("  7. [ ] Assign KarmaConfig asset to KarmaManager");
+        Debug.Log("  8. [ ] On Serna: Replace SernaInteraction → DialogueNPC");
+        Debug.Log("  9. [ ] On Serna: Assign Serna_Intro dialogue asset");
+        Debug.Log("  10.[ ] On Serna: Ensure she has a Collider (CapsuleCollider)");
+        Debug.Log("  11.[ ] (Optional) Add NPCSpeechBubble to Serna child object");
         Debug.Log("  12.[ ] Set Player tag = 'Player' on player object");
         Debug.Log("  13.[ ] Ensure InteractionDetector is on player child object");
         Debug.Log("  14.[ ] Play and test: approach Serna → E → choices → karma/coins");
         Debug.Log("");
         Debug.Log("  Menu shortcuts:");
         Debug.Log("    Karma > Setup Game Systems     — auto-creates managers");
+        Debug.Log("    Karma > Build UI Canvases      — builds all UI from Figma mockups");
         Debug.Log("    Karma > Create Karma Config    — creates KarmaConfig asset");
         Debug.Log("    Karma > Create Variable Store  — creates VariableStore asset");
         Debug.Log("    Karma > Create Serna Intro Dialogue — creates dialogue asset");
@@ -328,6 +406,10 @@ public class GameSystemsSetup
         Debug.Log("  Content Designer Toolkit:");
         Debug.Log("    Karma > Dialogue Editor        — visual dialogue tree editor");
         Debug.Log("    Karma > Variable Store         — inspect/edit game variables");
+        Debug.Log("");
+        Debug.Log("  UI Build (individual):");
+        Debug.Log("    Karma > Build HUD Canvas Only   — just the HUD canvas");
+        Debug.Log("    Karma > Build Dialogue Canvas Only — just the dialogue canvas");
         Debug.Log("═══════════════════════════════════════════════════════");
     }
 }

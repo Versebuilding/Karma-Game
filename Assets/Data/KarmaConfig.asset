@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c81888e1e7fd4e91af5fd76c82898bc, type: 3}
   m_Name: KarmaConfig
   m_EditorClassIdentifier: 
-  maxLevel: 7
+  maxLevel: 12
   xpPerLevel: 500
-  startingKarma: 0
-  flowerBaseSprite: {fileID: 0}
+  startingKarma: 167
+  flowerBaseSprite: {fileID: 21300000, guid: 7b247038d7fb54083933f2b2e96bf8a9, type: 3}
   petalSprites: []
-  barColor: {r: 1, g: 0.6, b: 0.2, a: 1}
-  levelUpFlashColor: {r: 1, g: 0.9, b: 0.4, a: 1}
-  karmaGainClip: {fileID: 8300000, guid: f477bf10e60d54572bf37dc8b1c00cbf, type: 3}
-  karmaLossClip: {fileID: 8300000, guid: e07de7c456e23408783e08c57b85c1a5, type: 3}
+  barColor: {r: 0.6698113, g: 0.3678445, b: 0.14217694, a: 1}
+  levelUpFlashColor: {r: 0.30147886, g: 0.8018868, b: 0.049172327, a: 1}
+  karmaGainClip: {fileID: 8300000, guid: dd27a083f822347559297747f1d762d6, type: 3}
+  karmaLossClip: {fileID: 8300000, guid: f477bf10e60d54572bf37dc8b1c00cbf, type: 3}
   levelUpClip: {fileID: 8300000, guid: 946a4317505304143af4d39ee6b184eb, type: 3}

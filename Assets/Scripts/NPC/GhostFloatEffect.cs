@@ -12,10 +12,10 @@ public class GhostFloatEffect : MonoBehaviour
     // ─── Float Settings ──────────────────────────────────────────
     [Header("Float Settings")]
     [Tooltip("Height above parent to hover (must be >= floatAmplitude to prevent terrain clipping)")]
-    [Range(0f, 5f)] [SerializeField] private float floatHeight = 1.0f;
+    [Range(0f, 5f)] [SerializeField] private float floatHeight = 0.25f;
 
     [Tooltip("How high the ghost bobs up and down (in local units)")]
-    [Range(0.05f, 2f)] [SerializeField] private float floatAmplitude = 0.3f;
+    [Range(0.05f, 2f)] [SerializeField] private float floatAmplitude = 0.15f;
 
     [Tooltip("Speed of the floating motion (cycles per second)")]
     [Range(0.1f, 5f)] [SerializeField] private float floatFrequency = 1f;
@@ -43,6 +43,13 @@ public class GhostFloatEffect : MonoBehaviour
 
     void Start()
     {
+        // Auto-migrate: reduce old high defaults on pre-existing scene instances
+        // (changing code defaults doesn't update already-serialized Inspector values)
+        if (floatHeight >= 0.9f)
+            floatHeight = 0.25f;
+        if (floatAmplitude >= 0.25f)
+            floatAmplitude = 0.15f;
+
         baseLocalPosition = transform.localPosition;
         baseLocalRotation = transform.localRotation;
 

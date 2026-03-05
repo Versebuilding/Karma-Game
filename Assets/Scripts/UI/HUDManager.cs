@@ -55,14 +55,18 @@ public class HUDManager : MonoBehaviour
     /// <summary>Whether the HUD is currently visible.</summary>
     public bool IsHUDVisible => isHudVisible;
 
+    // ─── Runtime Subscription State ─────────────────────────────
+    private bool isSubscribedToDialogue;
+    private bool isSubscribedToDetector;
+
     // ─── Unity Lifecycle ──────────────────────────────────────
 
     void Awake()
     {
         if (Instance != null && Instance != this)
         {
-            Debug.LogWarning("HUDManager: Duplicate instance destroyed.");
-            Destroy(gameObject);
+            Debug.LogWarning("HUDManager: Duplicate instance — destroying duplicate component (not gameObject).");
+            Destroy(this);
             return;
         }
         Instance = this;
@@ -70,24 +74,52 @@ public class HUDManager : MonoBehaviour
 
     void OnEnable()
     {
-        // Subscribe to dialogue events for auto-hiding interaction prompt
-        if (DialogueManager.Instance != null)
-        {
-            DialogueManager.Instance.OnDialogueStarted += HandleDialogueStarted;
-            DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
-        }
+        TrySubscribeToDialogue();
+        TrySubscribeToDetector();
+    }
 
-        // Subscribe to interaction detector for prompt display
-        SubscribeToInteractionDetector();
+    void Start()
+    {
+        // Fallback: if DialogueManager.Instance was null during OnEnable
+        // (common when this initializes before GameManagers),
+        // subscribe now — all Awakes have run by Start time.
+        TrySubscribeToDialogue();
+        TrySubscribeToDetector();
     }
 
     void OnDisable()
     {
+        UnsubscribeFromDialogue();
+    }
+
+    private void TrySubscribeToDialogue()
+    {
+        if (isSubscribedToDialogue) return;
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.OnDialogueStarted += HandleDialogueStarted;
+            DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
+            isSubscribedToDialogue = true;
+        }
+    }
+
+    private void UnsubscribeFromDialogue()
+    {
+        if (!isSubscribedToDialogue) return;
+
         if (DialogueManager.Instance != null)
         {
             DialogueManager.Instance.OnDialogueStarted -= HandleDialogueStarted;
             DialogueManager.Instance.OnDialogueEnded -= HandleDialogueEnded;
         }
+        isSubscribedToDialogue = false;
+    }
+
+    private void TrySubscribeToDetector()
+    {
+        if (isSubscribedToDetector) return;
+        SubscribeToInteractionDetector();
     }
 
     // ─── Public API ───────────────────────────────────────────
@@ -148,14 +180,19 @@ public class HUDManager : MonoBehaviour
 
     // ─── Interaction Detector Wiring ──────────────────────────
 
+    private InteractionDetector subscribedDetector;
+
     private void SubscribeToInteractionDetector()
     {
         // Find the player's InteractionDetector and subscribe to its events
         var player = FindFirstObjectByType<PlayerController>();
         if (player != null && player.interactionDetector != null)
         {
-            player.interactionDetector.OnPromptChanged += HandlePromptChanged;
-            player.interactionDetector.OnPromptHidden += HandlePromptHidden;
+            subscribedDetector = player.interactionDetector;
+            subscribedDetector.OnPromptChanged += HandlePromptChanged;
+            subscribedDetector.OnPromptHidden += HandlePromptHidden;
+            isSubscribedToDetector = true;
+            Debug.Log("HUDManager: Subscribed to InteractionDetector events.");
         }
     }
 
@@ -163,12 +200,14 @@ public class HUDManager : MonoBehaviour
     {
         if (Instance == this) Instance = null;
 
+        UnsubscribeFromDialogue();
+
         // Unsubscribe from interaction detector
-        var player = FindFirstObjectByType<PlayerController>();
-        if (player != null && player.interactionDetector != null)
+        if (subscribedDetector != null)
         {
-            player.interactionDetector.OnPromptChanged -= HandlePromptChanged;
-            player.interactionDetector.OnPromptHidden -= HandlePromptHidden;
+            subscribedDetector.OnPromptChanged -= HandlePromptChanged;
+            subscribedDetector.OnPromptHidden -= HandlePromptHidden;
+            subscribedDetector = null;
         }
     }
 }

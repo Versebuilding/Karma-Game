@@ -25,6 +25,9 @@ public class WalletManager : MonoBehaviour
     /// <summary>Current coin balance.</summary>
     public int Coins => coins;
 
+    /// <summary>Starting coin value (for reset).</summary>
+    public int StartingCoins => startingCoins;
+
     // ─── Events ─────────────────────────────────────────────────
 
     /// <summary>Fired when coins change. Args: (newTotal, delta).</summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -27,6 +28,13 @@ public class DialogueManager : MonoBehaviour
     private DialogueNode currentNode;
     private bool isActive;
 
+    // ─── One-Time Reward Tracking ────────────────────────────────
+    // Uses a runtime-only HashSet (NOT VariableStore) because VariableStore
+    // is a ScriptableObject whose changes persist in the editor between
+    // play sessions, causing rewards to be permanently skipped.
+    // This HashSet resets automatically each time you enter Play Mode.
+    [NonSerialized] private HashSet<string> rewardedChoices = new HashSet<string>();
+
     // ─── Public Properties ──────────────────────────────────────
 
     /// <summary>Whether a dialogue is currently active.</summary>
@@ -37,6 +45,12 @@ public class DialogueManager : MonoBehaviour
 
     /// <summary>The current node being displayed.</summary>
     public DialogueNode CurrentNode => currentNode;
+
+    /// <summary>NPC speaker name for the current dialogue (set by DialogueNPC before StartDialogue).</summary>
+    public string ActiveNPCSpeakerName { get; set; }
+
+    /// <summary>The transform of the NPC currently in dialogue (for camera + facing).</summary>
+    public Transform ActiveNPCTransform { get; set; }
 
     // ─── Events ─────────────────────────────────────────────────
 
@@ -99,33 +113,80 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     public void SelectChoice(int choiceIndex)
     {
-        if (!isActive || currentNode == null || !currentNode.HasChoices) return;
-        if (choiceIndex < 0 || choiceIndex >= currentNode.choices.Length) return;
+        if (!isActive || currentNode == null || !currentNode.HasChoices)
+        {
+            Debug.LogWarning($"DialogueManager.SelectChoice({choiceIndex}): Blocked — isActive={isActive}, currentNode={currentNode != null}, HasChoices={currentNode?.HasChoices}");
+            return;
+        }
+        if (choiceIndex < 0 || choiceIndex >= currentNode.choices.Length)
+        {
+            Debug.LogWarning($"DialogueManager.SelectChoice({choiceIndex}): Invalid index (choices count={currentNode.choices.Length})");
+            return;
+        }
 
         DialogueChoice choice = currentNode.choices[choiceIndex];
 
-        // Legacy: Apply hardcoded karma reward (backward compat)
-        if (choice.karmaChange != 0 && KarmaManager.Instance != null)
-        {
-            KarmaManager.Instance.AddKarma(choice.karmaChange);
-            Debug.Log($"DialogueManager: Karma {(choice.karmaChange > 0 ? "+" : "")}{choice.karmaChange}");
-        }
+        // One-time rewards: generate a unique key for this choice and check
+        // if rewards have already been given (this play session only).
+        // Uses a runtime HashSet — resets each time you enter Play Mode.
+        string rewardKey = $"{currentDialogue.dialogueId}_{currentNode.nodeId}_{choiceIndex}";
+        bool alreadyRewarded = rewardedChoices.Contains(rewardKey);
 
-        // Legacy: Apply hardcoded coin reward (backward compat)
-        if (choice.coinChange != 0 && WalletManager.Instance != null)
-        {
-            WalletManager.Instance.AddCoins(choice.coinChange);
-            Debug.Log($"DialogueManager: Coins {(choice.coinChange > 0 ? "+" : "")}{choice.coinChange}");
-        }
+        Debug.Log($"DialogueManager.SelectChoice({choiceIndex}): choice='{choice.choiceText}', karmaChange={choice.karmaChange}, coinChange={choice.coinChange}, alreadyRewarded={alreadyRewarded}");
 
-        // NEW: Execute extensible actions (from the actions list)
-        if (choice.actions != null)
+        if (!alreadyRewarded)
         {
-            foreach (var action in choice.actions)
-                action?.Execute();
+            // Legacy: Apply hardcoded karma reward (backward compat)
+            if (choice.karmaChange != 0)
+            {
+                if (KarmaManager.Instance != null)
+                {
+                    KarmaManager.Instance.AddKarma(choice.karmaChange);
+                    Debug.Log($"DialogueManager: ✓ Karma {(choice.karmaChange > 0 ? "+" : "")}{choice.karmaChange} applied (total: {KarmaManager.Instance.CurrentKarma})");
+                }
+                else
+                {
+                    Debug.LogWarning("DialogueManager: KarmaManager.Instance is NULL — cannot apply karma reward!");
+                }
+            }
+
+            // Legacy: Apply hardcoded coin reward (backward compat)
+            if (choice.coinChange != 0)
+            {
+                if (WalletManager.Instance != null)
+                {
+                    WalletManager.Instance.AddCoins(choice.coinChange);
+                    Debug.Log($"DialogueManager: ✓ Coins {(choice.coinChange > 0 ? "+" : "")}{choice.coinChange} applied (total: {WalletManager.Instance.Coins})");
+                }
+                else
+                {
+                    Debug.LogWarning("DialogueManager: WalletManager.Instance is NULL — cannot apply coin reward!");
+                }
+            }
+
+            // Execute extensible actions (from the actions list)
+            if (choice.actions != null)
+            {
+                foreach (var action in choice.actions)
+                    action?.Execute();
+            }
+
+            // Mark this choice as rewarded for this play session
+            rewardedChoices.Add(rewardKey);
+        }
+        else
+        {
+            Debug.Log($"DialogueManager: Choice already rewarded this session (key={rewardKey}), skipping rewards.");
         }
 
         OnChoiceMade?.Invoke(choice);
+
+        // Auto-sparkle on compassionate choices
+        if (choice.choiceStyle == ChoiceStyle.Empathetic)
+        {
+            if (SparkleVFXManager.Instance != null)
+                SparkleVFXManager.Instance.PlayAtPlayer();
+        }
 
         // Advance to next node
         if (!string.IsNullOrEmpty(choice.nextNodeId))
@@ -140,6 +201,16 @@ public class DialogueManager : MonoBehaviour
 
         // No next node — end dialogue
         EndDialogue();
+    }
+
+    /// <summary>
+    /// Clear all rewarded choice tracking (used by ResetGameButton).
+    /// Allows all dialogue rewards to fire again.
+    /// </summary>
+    public void ClearRewardedChoices()
+    {
+        rewardedChoices.Clear();
+        Debug.Log("DialogueManager: Rewarded choices cleared — all rewards re-enabled.");
     }
 
     /// <summary>
@@ -183,6 +254,8 @@ public class DialogueManager : MonoBehaviour
         isActive = false;
         currentDialogue = null;
         currentNode = null;
+        ActiveNPCSpeakerName = null;
+        ActiveNPCTransform = null;
 
         // Re-enable player movement
         SetPlayerInputEnabled(true);
