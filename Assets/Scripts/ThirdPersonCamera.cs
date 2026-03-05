@@ -30,12 +30,12 @@ public class ThirdPersonCamera : MonoBehaviour
     // ─── Dialogue Framing ────────────────────────────────────
     [Header("Dialogue Framing")]
     [Tooltip("Horizontal offset to the right for over-the-shoulder framing")]
-    [Range(0f, 3f)]
-    [SerializeField] private float shoulderOffset = 1.8f;
+    [Range(0f, 5f)]
+    [SerializeField] private float shoulderOffset = 2.5f;
 
     [Tooltip("Forward offset toward the NPC (positive = camera closer to conversation midpoint)")]
     [Range(0f, 5f)]
-    [SerializeField] private float dialogueForwardOffset = 1.5f;
+    [SerializeField] private float dialogueForwardOffset = 0f;
 
     [Tooltip("Vertical offset during dialogue (negative = camera lower, slight upward angle)")]
     [Range(-2f, 1f)]
@@ -253,10 +253,11 @@ public class ThirdPersonCamera : MonoBehaviour
     /// with a local offset. The rig stays near the player and rotates toward
     /// the NPC; the child offset naturally creates the third-person framing.
     ///
-    /// Enhancements over follow mode:
-    ///   - Shoulder offset shifts rig right so NPC isn't blocked by player body
-    ///   - FOV narrows for cinematic zoom onto the NPC + dialogue bubble
-    ///   - URP Bokeh DoF blurs the background, keeping NPC in sharp focus
+    /// The rig is offset to the RIGHT of the player→NPC axis so the child
+    /// camera can see past the player's body. The rig then looks AT the NPC
+    /// (not just parallel to dirToNPC), which correctly frames the NPC in the
+    /// center-right of the screen while the player's shoulder appears at the
+    /// left edge — classic over-the-shoulder cinema framing.
     /// </summary>
     private void UpdateDialogueCamera()
     {
@@ -269,9 +270,8 @@ public class ThirdPersonCamera : MonoBehaviour
 
         // ── Shoulder + forward offset ──
         // Cross(up, dirToNPC) gives the right-hand perpendicular direction.
-        // Moving the rig to the right shifts the camera right, pushing
-        // the player silhouette left of frame and revealing the NPC.
-        // Forward offset pushes the camera closer to the conversation midpoint.
+        // Moving the rig to the right shifts the camera right so it can see
+        // around the player's body to the NPC.
         Vector3 right = Vector3.Cross(Vector3.up, dirToNPC).normalized;
         Vector3 targetPos = player.position
             + right * shoulderOffset
@@ -281,8 +281,13 @@ public class ThirdPersonCamera : MonoBehaviour
         float t = dialogueTransitionSpeed * Time.deltaTime;
         transform.position = Vector3.Lerp(transform.position, targetPos, t);
 
-        // ── Rotate rig to face the NPC ──
-        Quaternion targetRot = Quaternion.LookRotation(dirToNPC);
+        // ── Rotate rig to look AT the NPC (not just parallel to dirToNPC) ──
+        // Using the rig's actual position → NPC direction ensures the NPC is
+        // properly framed in the center regardless of shoulder offset amount.
+        Vector3 npcCenter = npcTarget.position + Vector3.up * 1.0f;
+        Vector3 lookDirection = npcCenter - transform.position;
+        if (lookDirection.sqrMagnitude < 0.01f) lookDirection = dirToNPC;
+        Quaternion targetRot = Quaternion.LookRotation(lookDirection);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, t);
 
         // ── FOV zoom ──
@@ -304,9 +309,9 @@ public class ThirdPersonCamera : MonoBehaviour
             // Dynamic focus distance — keep NPC body in sharp focus
             if (dofOverride != null && childCamera != null)
             {
-                Vector3 npcCenter = npcTarget.position + Vector3.up * 1.5f;
+                Vector3 npcFocusPoint = npcTarget.position + Vector3.up * 1.5f;
                 float focusDist = Vector3.Distance(
-                    childCamera.transform.position, npcCenter);
+                    childCamera.transform.position, npcFocusPoint);
                 dofOverride.focusDistance.Override(focusDist);
             }
         }

@@ -3731,7 +3731,8 @@ MonoBehaviour:
   player: {fileID: 1394709062}
   smoothSpeed: 8
   shoulderOffset: 1.2
-  dialogueVerticalOffset: -0.4
+  dialogueForwardOffset: 1.5
+  dialogueVerticalOffset: -2
   dialogueTransitionSpeed: 3
   dialogueFOV: 40
   effectTransitionSpeed: 4
@@ -4650,6 +4651,42 @@ PrefabInstance:
       propertyPath: maxDialogueDistance
       value: 8
       objectReference: {fileID: 0}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: defaultIdleClips.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: defaultTalkClips.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: 'defaultIdleClips.Array.data[0]'
+      value: 
+      objectReference: {fileID: -203655887218126122, guid: 29a7b8b1b151844e48cc76d59e83af4d, type: 3}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: 'defaultIdleClips.Array.data[1]'
+      value: 
+      objectReference: {fileID: -203655887218126122, guid: afe00931bd7ce46e5bf5f68987e50e07, type: 3}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: 'defaultIdleClips.Array.data[2]'
+      value: 
+      objectReference: {fileID: -203655887218126122, guid: 29a7b8b1b151844e48cc76d59e83af4d, type: 3}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: 'defaultTalkClips.Array.data[0]'
+      value: 
+      objectReference: {fileID: -203655887218126122, guid: 162ce0bbf7f85491fb4f482b462bc536, type: 3}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: 'defaultTalkClips.Array.data[1]'
+      value: 
+      objectReference: {fileID: -203655887218126122, guid: cc909e504cd574a2eb6e05fd8c3d5f5f, type: 3}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: 'defaultTalkClips.Array.data[2]'
+      value: 
+      objectReference: {fileID: -203655887218126122, guid: 17728860f61a448389561f2bde966935, type: 3}
+    - target: {fileID: 7732653560905896703, guid: 4acb8f33d216c4870a5f7d9ab1b08eec, type: 3}
+      propertyPath: 'defaultTalkClips.Array.data[3]'
+      value: 
+      objectReference: {fileID: -203655887218126122, guid: c56169f355d1640a0ba48496a2b3c989, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
