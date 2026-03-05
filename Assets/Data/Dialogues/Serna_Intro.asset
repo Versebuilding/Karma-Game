@@ -16,78 +16,202 @@ MonoBehaviour:
   nodes:
   - nodeId: start
     speakerName: Serna
-    dialogueText: Oh... you can see me? Most people walk right past without noticing.
-      I've been here for so long, waiting for someone... anyone...
+    dialogueText: 'Why can''t I ever feel full? Why am I always hungry? Why am I
+      stuck like this!
+
+'
+    voiceClip: {fileID: 0}
     choices: []
-    nextNodeId: serna_ask
+    nextNodeId: sammy_intro
     isEnd: 0
+    conditions: []
+    onShowActions: []
   - nodeId: serna_ask
     speakerName: Serna
-    dialogueText: My cup... it's been empty for so long. I can't remember what it
-      feels like to not be hungry. Could you... would you help me?
+    dialogueText: Hi Im Serna and Im tired of eating endlessly, can you help me break
+      free from this curse?
+    voiceClip: {fileID: 0}
     choices:
     - choiceText: Of course, Serna. I'd like to help you.
       inputLabel: Z
       nextNodeId: empathetic_response
       karmaChange: 50
-      coinChange: 0
+      coinChange: 20
       requiredKarmaLevel: 0
       choiceStyle: 0
-    - choiceText: What's in it for me?
+      conditions: []
+      actions: []
+    - choiceText: Curses aren't real! What are you 4?
       inputLabel: X
       nextNodeId: selfish_response
       karmaChange: -20
-      coinChange: 100
+      coinChange: 0
       requiredKarmaLevel: 0
       choiceStyle: 1
-    - choiceText: I'll think about it.
+      conditions: []
+      actions: []
+    - choiceText: Tell me more about this curse.
       inputLabel: C
       nextNodeId: neutral_response
       karmaChange: 0
       coinChange: 0
       requiredKarmaLevel: 0
       choiceStyle: 2
+      conditions: []
+      actions: []
     nextNodeId: 
     isEnd: 0
+    conditions: []
+    onShowActions: []
   - nodeId: empathetic_response
     speakerName: Serna
-    dialogueText: "You... you would? Thank you! I haven't felt kindness in so long.
-      There's a baker in the village \u2014 he sometimes leaves bread out. If you
-      could bring some back... I would be forever grateful."
+    dialogueText: You... you would? Thank you! I haven't felt kindness in so long.
+      All I know about this curse is that a blessed food is what can set me free.
+      The food needs to be blessed by a monk and until then, I have to keep eating
+      all this food falling from the sky as a form of karma to repent for all my
+      past deeds
+    voiceClip: {fileID: 0}
     choices: []
     nextNodeId: quest_accepted
     isEnd: 0
+    conditions: []
+    onShowActions: []
   - nodeId: selfish_response
     speakerName: Serna
-    dialogueText: "I... I understand. Everyone needs something. Here, take these
-      coins \u2014 they're all I have left. Just... please come back if you change
-      your mind."
+    dialogueText: You, you wouldn't know a curse even if it was staring right at
+      your face you ignorant child.
+    voiceClip: {fileID: 0}
     choices: []
     nextNodeId: end_selfish
     isEnd: 0
+    conditions: []
+    onShowActions: []
   - nodeId: neutral_response
     speakerName: Serna
-    dialogueText: Of course... take your time. I'll be here. I'm always here. If
-      you decide to help, I need bread from the village baker.
+    dialogueText: 'Of course...All I know about this curse is that only a blessed
+      food by a monk is what can set me free. '
+    voiceClip: {fileID: 0}
     choices: []
     nextNodeId: end_neutral
     isEnd: 0
+    conditions: []
+    onShowActions: []
   - nodeId: quest_accepted
-    speakerName: Serna
-    dialogueText: "The baker's shop is to the east, past the old bridge. Be careful
-      \u2014 the ghosts grow restless at night. And Sammy... thank you. Truly."
-    choices: []
-    nextNodeId: 
-    isEnd: 1
+    speakerName: sammy
+    dialogueText: What a coincidence! Monk Ananda just gave me a temple offering
+      blessed by the monk himself!
+    voiceClip: {fileID: 0}
+    choices:
+    - choiceText: Share bread with Serna
+      inputLabel: Z
+      nextNodeId: sernaBread_empathetic
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      conditions: []
+      actions: []
+    - choiceText: Don't offer the bread!
+      inputLabel: X
+      nextNodeId: node_11
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 1
+      conditions: []
+      actions: []
+    nextNodeId: neutral_response
+    isEnd: 0
+    conditions: []
+    onShowActions: []
   - nodeId: end_selfish
     speakerName: Serna
-    dialogueText: Maybe... maybe someday someone will help just because it's right...
+    dialogueText: Anyways, only a blessed monk food can set me free from eating all
+      this food falling from the sky!
+    voiceClip: {fileID: 0}
     choices: []
-    nextNodeId: 
-    isEnd: 1
+    nextNodeId: quest_accepted
+    isEnd: 0
+    conditions: []
+    onShowActions: []
   - nodeId: end_neutral
     speakerName: Serna
-    dialogueText: I'll wait. I've gotten good at waiting...
+    dialogueText: Until then, I have to keep eating all this food falling from the
+      sky.
+    voiceClip: {fileID: 0}
+    choices: []
+    nextNodeId: quest_accepted
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: end_empathetic
+    speakerName: 
+    dialogueText: You seem to be a kind person I can tell you have places to go!
+    voiceClip: {fileID: 0}
+    choices: []
+    nextNodeId: quest_accepted
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: sammy_intro
+    speakerName: sammy
+    dialogueText: 'Hi there- Wow! that looks like alot of yummy treats! Watch out
+      for that sugar!
+
+'
+    voiceClip: {fileID: 0}
+    choices: []
+    nextNodeId: serna_ask
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: sernaBread_empathetic
+    speakerName: Serna
+    dialogueText: Wow! Are you for real! Is this truly happening? Am I going to be
+      free after all this time! Free from all this food-eating misery!
+    voiceClip: {fileID: 0}
     choices: []
     nextNodeId: 
     isEnd: 1
+    conditions: []
+    onShowActions: []
+  - nodeId: sernaBread_selfish
+    speakerName: Serna
+    dialogueText: So-can I have some of the bread? Du-uh! Aren't you being the selfish
+      one and they call me the hungry ghost here, wha-at!
+    voiceClip: {fileID: 0}
+    choices:
+    - choiceText: Share the bread
+      inputLabel: Z
+      nextNodeId: 
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      conditions: []
+      actions: []
+    nextNodeId: node_12
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: end_sernaBread
+    speakerName: Serna
+    dialogueText: Wasn't that difficult now was it? Thanks!
+    voiceClip: {fileID: 0}
+    choices:
+    - choiceText: Share the bread
+      inputLabel: Z
+      nextNodeId: 
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      conditions: []
+      actions: []
+    nextNodeId: 
+    isEnd: 1
+    conditions: []
+    onShowActions: []
+  references:
+    version: 2
+    RefIds: []

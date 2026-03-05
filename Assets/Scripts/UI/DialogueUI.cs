@@ -59,60 +59,212 @@ public class DialogueUI : MonoBehaviour
     [Tooltip("Sound played when selecting a choice")]
     [SerializeField] private AudioClip choiceSound;
 
+    [Header("Selection Feedback")]
+    [Tooltip("Brief delay after choice selection to show highlight before advancing")]
+    [Range(0.1f, 1f)]
+    [SerializeField] private float selectionDelay = 0.4f;
+
+    [Header("Player Choice Display")]
+    [Tooltip("Speaker name shown when the player speaks their choice")]
+    [SerializeField] private string playerSpeakerName = "Sammy";
+
+    [Tooltip("Sound played when the player's choice text starts displaying")]
+    [SerializeField] private AudioClip playerSpeakingSound;
+
+    [Header("Auto-Size")]
+    [Tooltip("Minimum panel height (for NPC-speaking minimal mode)")]
+    [SerializeField] private float minPanelHeight = 130f;
+
+    [Tooltip("Maximum panel height")]
+    [SerializeField] private float maxPanelHeight = 300f;
+
+    [Tooltip("Padding added above/below text for auto-size")]
+    [SerializeField] private float panelPadding = 60f;
+
+    [Header("Layout Override")]
+    [Tooltip("Override panel to fixed-width centered (0 = keep Inspector layout)")]
+    [SerializeField] private float fixedPanelWidth = 1000f;
+
     // ─── Runtime State ────────────────────────────────────────
     private bool isShowingChoices;
     private bool isTypewriting;
+    private bool isWaitingAfterSelection;
+    private bool isShowingPlayerChoice;
+    private bool isWaitingToShowChoices;       // NPC text shown, waiting for Enter before showing choices
+    private int pendingChoiceIndex;
     private Coroutine typewriterCoroutine;
+    private Coroutine selectionCoroutine;
     private string fullDialogueText;
     private int currentChoiceCount;
+    private ChoiceButtonUI[] currentChoiceButtons;
+    private DialogueChoice[] pendingChoicesForDisplay;  // Stored choices while waiting for Enter
+
+    // ─── Cached References (for speaker routing + auto-size) ──
+    private RectTransform dialoguePanelRect;
+    private GameObject speakerBadgeObj;
+    private GameObject dialogueTextAreaObj;
+    private Image panelBorderImage;        // orange border Image on DialoguePanel
+    private GameObject innerPanelObj;      // "InnerPanel" child (cream bg + text + continue prompt)
 
     // ─── Input Keys ───────────────────────────────────────────
     private readonly KeyCode[] choiceKeys = { KeyCode.Z, KeyCode.X, KeyCode.C };
     private readonly KeyCode advanceKey1 = KeyCode.E;
     private readonly KeyCode advanceKey2 = KeyCode.Space;
+    private readonly KeyCode advanceKey3 = KeyCode.Return;
 
     // ─── Unity Lifecycle ──────────────────────────────────────
+
+    private bool isSubscribed;
 
     void Awake()
     {
         if (dialoguePanel != null)
+        {
             dialoguePanel.SetActive(false);
+            dialoguePanelRect = dialoguePanel.GetComponent<RectTransform>();
+        }
+
+        // Cache speaker badge and text area for show/hide during speaker routing
+        if (speakerNameText != null)
+            speakerBadgeObj = speakerNameText.transform.parent?.gameObject;
+
+        if (dialogueText != null)
+            dialogueTextAreaObj = dialogueText.transform.parent?.gameObject;
+
+        // Cache panel visual elements for ghost-panel mode
+        if (dialoguePanel != null)
+        {
+            panelBorderImage = dialoguePanel.GetComponent<Image>();
+            var innerTransform = dialoguePanel.transform.Find("InnerPanel");
+            if (innerTransform != null)
+                innerPanelObj = innerTransform.gameObject;
+        }
 
         if (uiAudioSource == null)
             uiAudioSource = GetComponent<AudioSource>();
+
+        // Auto-migrate panel dimensions for pre-existing scene instances
+        if (fixedPanelWidth <= 850f)
+            fixedPanelWidth = 1000f;
+        if (minPanelHeight <= 100f)
+            minPanelHeight = 130f;
+
+        // Ensure panel uses fixed-width centered layout (safety net if UISetupTool wasn't re-run)
+        EnsureLayout();
+    }
+
+    /// <summary>Override dialogue panel to fixed-width centered layout at runtime.</summary>
+    private void EnsureLayout()
+    {
+        if (dialoguePanelRect == null || fixedPanelWidth <= 0f) return;
+
+        dialoguePanelRect.anchorMin = new Vector2(0.5f, 0f);
+        dialoguePanelRect.anchorMax = new Vector2(0.5f, 0f);
+        dialoguePanelRect.pivot = new Vector2(0.5f, 0f);
+        dialoguePanelRect.sizeDelta = new Vector2(fixedPanelWidth, dialoguePanelRect.sizeDelta.y);
     }
 
     void OnEnable()
     {
+        TrySubscribe();
+    }
+
+    void Start()
+    {
+        // Fallback: if DialogueManager.Instance was null during OnEnable
+        // (common when DialogueCanvas initializes before GameManagers),
+        // subscribe now — all Awakes have run by Start time.
+        TrySubscribe();
+    }
+
+    void OnDisable()
+    {
+        Unsubscribe();
+    }
+
+    private void TrySubscribe()
+    {
+        if (isSubscribed) return;
+
         if (DialogueManager.Instance != null)
         {
             DialogueManager.Instance.OnDialogueStarted += HandleDialogueStarted;
             DialogueManager.Instance.OnNodeChanged += HandleNodeChanged;
             DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
+            isSubscribed = true;
+            Debug.Log("DialogueUI: Subscribed to DialogueManager events.");
         }
     }
 
-    void OnDisable()
+    private void Unsubscribe()
     {
+        if (!isSubscribed) return;
+
         if (DialogueManager.Instance != null)
         {
             DialogueManager.Instance.OnDialogueStarted -= HandleDialogueStarted;
             DialogueManager.Instance.OnNodeChanged -= HandleNodeChanged;
             DialogueManager.Instance.OnDialogueEnded -= HandleDialogueEnded;
         }
+        isSubscribed = false;
     }
 
     void Update()
     {
-        if (DialogueManager.Instance == null || !DialogueManager.Instance.IsDialogueActive)
+        // Allow input during player choice display (even though dialogue hasn't advanced yet)
+        if (DialogueManager.Instance == null ||
+            (!DialogueManager.Instance.IsDialogueActive && !isShowingPlayerChoice))
             return;
 
-        // If typewriter is still running, pressing E/Space skips to full text
+        // Don't process input while showing selection highlight
+        if (isWaitingAfterSelection) return;
+
+        // Player's choice text is showing — wait for Enter/E to confirm, then advance to NPC response
+        if (isShowingPlayerChoice)
+        {
+            if (isTypewriting)
+            {
+                if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2) || Input.GetKeyDown(advanceKey3))
+                    SkipTypewriter();
+                return;
+            }
+            if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2) || Input.GetKeyDown(advanceKey3))
+            {
+                ConfirmPlayerChoice();
+            }
+            return;
+        }
+
+        // If typewriter is still running, pressing Enter/E/Space skips to full text
         if (isTypewriting)
         {
-            if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2))
+            if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2) || Input.GetKeyDown(advanceKey3))
             {
                 SkipTypewriter();
+            }
+            return;
+        }
+
+        // Waiting for user to acknowledge NPC text before showing choices
+        if (isWaitingToShowChoices)
+        {
+            if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2) || Input.GetKeyDown(advanceKey3))
+            {
+                // If bubble is still typewriting, skip it first
+                var bubble = GetActiveBubble();
+                if (bubble != null && bubble.IsTypewriting)
+                {
+                    bubble.SkipTypewriter();
+                    return;
+                }
+
+                isWaitingToShowChoices = false;
+                PlayUISound(advanceSound);
+                ShowChoices(pendingChoicesForDisplay);
+                pendingChoicesForDisplay = null;
+
+                // Hide "Press Enter >>" prompt in the NPC bubble now that choices are visible
+                HideBubbleContinuePrompt();
             }
             return;
         }
@@ -131,8 +283,8 @@ public class DialogueUI : MonoBehaviour
         }
         else
         {
-            // Non-choice node: E or Space to advance
-            if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2))
+            // Non-choice node: Enter/E/Space to advance
+            if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2) || Input.GetKeyDown(advanceKey3))
             {
                 OnAdvance();
             }
@@ -143,21 +295,63 @@ public class DialogueUI : MonoBehaviour
 
     private void HandleDialogueStarted(DialogueSO dialogue)
     {
-        if (dialoguePanel != null)
-            dialoguePanel.SetActive(true);
+        if (dialoguePanel == null)
+        {
+            Debug.LogError("DialogueUI: dialoguePanel reference is NULL! " +
+                "Re-run 'Karma > Build UI Canvases' or assign manually in Inspector.");
+            return;
+        }
 
-        Debug.Log("DialogueUI: Panel shown.");
+        // Panel activation is deferred to HandleNodeChanged to avoid a flash
+        // of empty panel before content arrives. HandleNodeChanged fires
+        // immediately after this event in the same frame.
+        Debug.Log($"DialogueUI: Dialogue started for '{dialogue?.dialogueId}'.");
     }
 
     private void HandleNodeChanged(DialogueNode node)
     {
         if (node == null) return;
 
+        bool npcSpeaking = IsNPCSpeaker(node.speakerName);
+        bool hasChoices = node.HasChoices;
+
+        // ── NPC speaking, no choices → bubble only, hide entire bottom panel ──
+        if (npcSpeaking && !hasChoices)
+        {
+            HideChoices();
+            ShowContinuePrompt(false);
+
+            if (dialoguePanel != null)
+                dialoguePanel.SetActive(false);
+
+            return;
+        }
+
+        // ── NPC speaking WITH choices → show NPC text first, wait for Enter, then choices ──
+        // NPC question text appears in the world-space bubble (NPCSpeechBubble).
+        // Player reads NPC text, presses Enter, THEN choice buttons appear on right side.
+        if (npcSpeaking && hasChoices)
+        {
+            if (dialoguePanel != null)
+                dialoguePanel.SetActive(false);
+
+            // Don't show choices yet — store them and wait for Enter
+            HideChoices();
+            isWaitingToShowChoices = true;
+            pendingChoicesForDisplay = node.choices;
+            return;
+        }
+
+        // ── Player speaking (no choices) → full bottom panel with visuals ──
+        if (dialoguePanel != null)
+            dialoguePanel.SetActive(true);
+
+        SetPanelVisualsVisible(true);        // Restore border + inner panel
+        ShowDialogueContent(true);
+
         // Update speaker name
         if (speakerNameText != null)
-        {
             speakerNameText.text = node.speakerName ?? "";
-        }
 
         // Update dialogue text (with optional typewriter effect)
         fullDialogueText = node.dialogueText ?? "";
@@ -172,7 +366,7 @@ public class DialogueUI : MonoBehaviour
         }
 
         // Choices or continue?
-        if (node.HasChoices)
+        if (hasChoices)
         {
             ShowChoices(node.choices);
         }
@@ -181,6 +375,9 @@ public class DialogueUI : MonoBehaviour
             HideChoices();
             ShowContinuePrompt(true);
         }
+
+        // Auto-size panel based on text content
+        AutoSizePanelToText();
     }
 
     private void HandleDialogueEnded()
@@ -191,8 +388,22 @@ public class DialogueUI : MonoBehaviour
             typewriterCoroutine = null;
         }
 
+        if (selectionCoroutine != null)
+        {
+            StopCoroutine(selectionCoroutine);
+            selectionCoroutine = null;
+        }
+
         isTypewriting = false;
         isShowingChoices = false;
+        isWaitingAfterSelection = false;
+        isShowingPlayerChoice = false;
+        isWaitingToShowChoices = false;
+        pendingChoiceIndex = -1;
+        currentChoiceButtons = null;
+        pendingChoicesForDisplay = null;
+
+        SetPanelVisualsVisible(true);  // Reset for next dialogue
 
         if (dialoguePanel != null)
             dialoguePanel.SetActive(false);
@@ -213,6 +424,7 @@ public class DialogueUI : MonoBehaviour
 
         currentChoiceCount = Mathf.Min(choices.Length, choiceKeys.Length);
         isShowingChoices = true;
+        currentChoiceButtons = new ChoiceButtonUI[currentChoiceCount];
 
         for (int i = 0; i < currentChoiceCount; i++)
         {
@@ -224,7 +436,7 @@ public class DialogueUI : MonoBehaviour
             if (DialogueManager.Instance != null)
                 available = DialogueManager.Instance.IsChoiceAvailable(choice);
 
-            SpawnChoiceButton(choice, inputLabel, i, available);
+            currentChoiceButtons[i] = SpawnChoiceButton(choice, inputLabel, i, available);
         }
 
         // Show choice container
@@ -252,9 +464,9 @@ public class DialogueUI : MonoBehaviour
         }
     }
 
-    private void SpawnChoiceButton(DialogueChoice choice, string inputLabel, int index, bool available)
+    private ChoiceButtonUI SpawnChoiceButton(DialogueChoice choice, string inputLabel, int index, bool available)
     {
-        if (choiceButtonPrefab == null || choiceContainer == null) return;
+        if (choiceButtonPrefab == null || choiceContainer == null) return null;
 
         GameObject btnObj = Instantiate(choiceButtonPrefab, choiceContainer);
         ChoiceButtonUI btnUI = btnObj.GetComponent<ChoiceButtonUI>();
@@ -269,6 +481,71 @@ public class DialogueUI : MonoBehaviour
         {
             Debug.LogWarning("DialogueUI: ChoiceButton prefab missing ChoiceButtonUI component!");
         }
+
+        return btnUI;
+    }
+
+    // ─── Speaker Routing Helpers ─────────────────────────────
+
+    /// <summary>
+    /// Returns true if the given speaker name matches the active NPC speaker
+    /// (i.e., this is the NPC talking, not the player).
+    /// </summary>
+    private bool IsNPCSpeaker(string speakerName)
+    {
+        if (DialogueManager.Instance == null) return false;
+        string npcName = DialogueManager.Instance.ActiveNPCSpeakerName;
+        if (string.IsNullOrEmpty(npcName) || string.IsNullOrEmpty(speakerName))
+            return false;
+        return string.Equals(npcName, speakerName, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Shows or hides the speaker badge and dialogue text area.
+    /// When hidden, the panel shows only the continue prompt (minimal mode).
+    /// </summary>
+    private void ShowDialogueContent(bool show)
+    {
+        if (speakerBadgeObj != null)
+            speakerBadgeObj.SetActive(show);
+
+        if (dialogueTextAreaObj != null)
+            dialogueTextAreaObj.SetActive(show);
+    }
+
+    /// <summary>
+    /// Show or hide the panel's visual chrome (border + inner panel).
+    /// When hidden with panel still active, only ChoiceContainer renders ("ghost panel").
+    /// </summary>
+    private void SetPanelVisualsVisible(bool visible)
+    {
+        if (panelBorderImage != null)
+            panelBorderImage.enabled = visible;
+        if (innerPanelObj != null)
+            innerPanelObj.SetActive(visible);
+    }
+
+    /// <summary>Set the panel to a specific height.</summary>
+    private void AutoSizePanel(float height)
+    {
+        if (dialoguePanelRect == null) return;
+        var size = dialoguePanelRect.sizeDelta;
+        size.y = height;
+        dialoguePanelRect.sizeDelta = size;
+    }
+
+    /// <summary>Auto-size the panel height based on dialogue text content.</summary>
+    private void AutoSizePanelToText()
+    {
+        if (dialoguePanelRect == null || dialogueText == null) return;
+
+        // Force TMP to calculate preferred values
+        dialogueText.ForceMeshUpdate();
+        float textHeight = dialogueText.preferredHeight;
+
+        // Panel height = text + padding, clamped
+        float panelHeight = Mathf.Clamp(textHeight + panelPadding, minPanelHeight, maxPanelHeight);
+        AutoSizePanel(panelHeight);
     }
 
     // ─── Continue Prompt ──────────────────────────────────────
@@ -284,16 +561,104 @@ public class DialogueUI : MonoBehaviour
     private void OnChoiceSelected(int choiceIndex)
     {
         if (DialogueManager.Instance == null) return;
+        if (isWaitingAfterSelection) return;
 
         PlayUISound(choiceSound);
-        DialogueManager.Instance.SelectChoice(choiceIndex);
 
+        // Show selection highlight (mockup: selected choice turns orange)
+        if (currentChoiceButtons != null)
+        {
+            for (int i = 0; i < currentChoiceButtons.Length; i++)
+            {
+                if (currentChoiceButtons[i] != null)
+                    currentChoiceButtons[i].SetSelected(i == choiceIndex);
+            }
+        }
+
+        // Brief delay to show the highlight, then advance
+        if (selectionCoroutine != null) StopCoroutine(selectionCoroutine);
+        selectionCoroutine = StartCoroutine(SelectionDelayCoroutine(choiceIndex));
+    }
+
+    private IEnumerator SelectionDelayCoroutine(int choiceIndex)
+    {
+        isWaitingAfterSelection = true;
+        yield return new WaitForSeconds(selectionDelay);
+
+        // Get choice text before advancing to NPC response
+        DialogueNode currentNode = DialogueManager.Instance.CurrentNode;
+        if (currentNode == null || !currentNode.HasChoices
+            || choiceIndex >= currentNode.choices.Length)
+        {
+            // Fallback: advance immediately if choice data is missing
+            isWaitingAfterSelection = false;
+            DialogueManager.Instance.SelectChoice(choiceIndex);
+            isShowingChoices = false;
+            yield break;
+        }
+
+        string choiceText = currentNode.choices[choiceIndex].choiceText;
+
+        // Hide choice buttons, activate + restore panel visuals, show the player's chosen line
+        HideChoices();
+
+        // Activate player panel (was hidden during NPC+choices mode)
+        if (dialoguePanel != null)
+            dialoguePanel.SetActive(true);
+
+        SetPanelVisualsVisible(true);    // Restore border + inner panel for player's choice
+        ShowDialogueContent(true);
+
+        if (speakerNameText != null)
+            speakerNameText.text = playerSpeakerName;
+
+        // Play player speaking sound
+        PlayUISound(playerSpeakingSound);
+
+        // Typewriter the choice text as player dialogue
+        fullDialogueText = choiceText;
+        if (useTypewriter && choiceText.Length > 0)
+            StartTypewriter(choiceText);
+        else if (dialogueText != null)
+            dialogueText.text = choiceText;
+
+        AutoSizePanelToText();
+        ShowContinuePrompt(true);
+
+        // Enter "showing player choice" state — Update() handles E press to confirm
+        isWaitingAfterSelection = false;
+        isShowingPlayerChoice = true;
+        pendingChoiceIndex = choiceIndex;
+    }
+
+    /// <summary>
+    /// Called from Update() when player presses E after reading their choice text.
+    /// Advances the dialogue to the NPC response.
+    /// </summary>
+    private void ConfirmPlayerChoice()
+    {
+        Debug.Log($"DialogueUI.ConfirmPlayerChoice(): pendingChoiceIndex={pendingChoiceIndex}");
+
+        isShowingPlayerChoice = false;
+        ShowContinuePrompt(false);
+        PlayUISound(advanceSound);
+
+        // NOW apply karma/coins and advance to the NPC response
+        DialogueManager.Instance.SelectChoice(pendingChoiceIndex);
         isShowingChoices = false;
     }
 
     private void OnAdvance()
     {
         if (DialogueManager.Instance == null) return;
+
+        // If the NPC bubble is still typewriting, skip it instead of advancing
+        var bubble = GetActiveBubble();
+        if (bubble != null && bubble.IsTypewriting)
+        {
+            bubble.SkipTypewriter();
+            return;
+        }
 
         PlayUISound(advanceSound);
         DialogueManager.Instance.AdvanceDialogue();
@@ -321,6 +686,9 @@ public class DialogueUI : MonoBehaviour
 
         if (dialogueText != null)
             dialogueText.text = fullDialogueText;
+
+        // Resize to final text
+        AutoSizePanelToText();
     }
 
     private IEnumerator TypewriterCoroutine(string text)
@@ -350,5 +718,32 @@ public class DialogueUI : MonoBehaviour
     {
         if (clip != null && uiAudioSource != null)
             uiAudioSource.PlayOneShot(clip);
+    }
+
+    // ─── Bubble Integration ──────────────────────────────────
+
+    /// <summary>
+    /// Gets the active NPC's speech bubble (if any).
+    /// Used to coordinate typewriter skip and continue prompt visibility.
+    /// </summary>
+    private NPCSpeechBubble GetActiveBubble()
+    {
+        if (DialogueManager.Instance == null) return null;
+
+        var npcTransform = DialogueManager.Instance.ActiveNPCTransform;
+        if (npcTransform == null) return null;
+
+        return npcTransform.GetComponentInChildren<NPCSpeechBubble>();
+    }
+
+    /// <summary>
+    /// Hides the "Press Enter >>" prompt in the active NPC speech bubble.
+    /// Called when choices become visible (so the bubble stops showing "Press Enter").
+    /// </summary>
+    private void HideBubbleContinuePrompt()
+    {
+        var bubble = GetActiveBubble();
+        if (bubble != null)
+            bubble.HideContinuePrompt();
     }
 }

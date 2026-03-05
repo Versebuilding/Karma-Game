@@ -42,14 +42,29 @@ public class GroundedState : PlayerState
         }
 
         // --- Transition: interact with world objects ---
-        if (player.input.InteractPressed && player.interactionDetector != null
-            && player.interactionDetector.CurrentTarget != null)
+        if (player.input.InteractPressed)
         {
-            var target = player.interactionDetector.CurrentTarget;
-            if (target.CanInteract(player))
+            if (player.interactionDetector == null)
             {
-                target.Interact(player);
-                return;
+                Debug.LogWarning("GroundedState: InteractPressed but interactionDetector is null! " +
+                    "Ensure InteractionDetector is on a child of the Player.");
+            }
+            else if (player.interactionDetector.CurrentTarget == null)
+            {
+                Debug.Log("GroundedState: InteractPressed but no target in range.");
+            }
+            else
+            {
+                var target = player.interactionDetector.CurrentTarget;
+                if (target.CanInteract(player))
+                {
+                    target.Interact(player);
+                    return;
+                }
+                else
+                {
+                    Debug.Log($"GroundedState: Target '{target.name}' can't interact right now.");
+                }
             }
         }
 

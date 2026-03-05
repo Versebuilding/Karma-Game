@@ -304,6 +304,13 @@ public class DialogueEditorWindow : EditorWindow
         textProp.stringValue = EditorGUILayout.TextArea(textProp.stringValue,
             DialogueEditorStyles.DialogueText, GUILayout.MinHeight(60));
 
+        // Voice clip + Animation (per-node media)
+        EditorGUILayout.Space(4);
+        EditorGUILayout.PropertyField(nodeProp.FindPropertyRelative("voiceClip"),
+            new GUIContent("Voice Clip"));
+        EditorGUILayout.PropertyField(nodeProp.FindPropertyRelative("nodeAnimation"),
+            new GUIContent("Node Animation"));
+
         EditorGUILayout.EndVertical();
 
         // Draw left border

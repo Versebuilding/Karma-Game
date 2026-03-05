@@ -45,6 +45,13 @@ public class KarmaFlowerUI : MonoBehaviour
     [Tooltip("Bar fill color")]
     [SerializeField] private Color barFillColor = new Color(1f, 0.75f, 0.2f, 1f); // orange-gold
 
+    [Tooltip("Color used during karma gain animation (green pulse)")]
+    [SerializeField] private Color barGainColor = new Color(0.2f, 0.9f, 0.3f, 1f);
+
+    [Tooltip("Duration of the fill animation in seconds")]
+    [Range(0.2f, 1.5f)]
+    [SerializeField] private float fillAnimDuration = 0.5f;
+
     [Header("Level Text")]
     [Tooltip("Optional text showing current karma level")]
     [SerializeField] private TMP_Text levelText;
@@ -78,28 +85,62 @@ public class KarmaFlowerUI : MonoBehaviour
 
     // ─── Runtime ──────────────────────────────────────────────
     private Coroutine flashCoroutine;
+    private Coroutine fillCoroutine;
     private int displayedLevel = -1;
+    private float currentDisplayedFill;
+    private bool isSubscribed;
 
     // ─── Unity Lifecycle ──────────────────────────────────────
 
     void OnEnable()
     {
-        if (KarmaManager.Instance != null)
+        // Runtime safety: force the progress bar Image to Filled mode.
+        // If the scene was serialized with Image.Type = Simple, fillAmount
+        // changes have NO visual effect. This guarantees correct rendering
+        // regardless of serialized Inspector values.
+        if (progressBarFill != null)
         {
-            KarmaManager.Instance.OnKarmaChanged += HandleKarmaChanged;
-            KarmaManager.Instance.OnKarmaLevelUp += HandleLevelUp;
-
-            // Initialize display
-            UpdateDisplay(
-                KarmaManager.Instance.CurrentKarma,
-                KarmaManager.Instance.CurrentLevel,
-                KarmaManager.Instance.CurrentLevelProgress
-            );
+            progressBarFill.type = Image.Type.Filled;
+            progressBarFill.fillMethod = Image.FillMethod.Horizontal;
+            progressBarFill.fillOrigin = (int)Image.OriginHorizontal.Left;
         }
+
+        TrySubscribe();
 
         // Hide flash
         if (levelUpFlash != null)
             levelUpFlash.gameObject.SetActive(false);
+    }
+
+    void Start()
+    {
+        // Fallback: if KarmaManager.Instance was null during OnEnable
+        // (common when HUDCanvas initializes before GameManagers),
+        // subscribe now — all Awakes have run by Start time.
+        TrySubscribe();
+    }
+
+    private void TrySubscribe()
+    {
+        if (isSubscribed) return;
+        if (KarmaManager.Instance == null) return;
+
+        KarmaManager.Instance.OnKarmaChanged += HandleKarmaChanged;
+        KarmaManager.Instance.OnKarmaLevelUp += HandleLevelUp;
+        isSubscribed = true;
+
+        // Initialize display (no animation on startup)
+        float progress = KarmaManager.Instance.CurrentLevelProgress;
+        currentDisplayedFill = progress;
+        UpdateDisplay(
+            KarmaManager.Instance.CurrentKarma,
+            KarmaManager.Instance.CurrentLevel,
+            progress
+        );
+
+        Debug.Log($"KarmaFlowerUI: Subscribed. Karma={KarmaManager.Instance.CurrentKarma}, " +
+            $"Level={KarmaManager.Instance.CurrentLevel}, Progress={progress:F3}, " +
+            $"BarRef={progressBarFill != null}, Active={gameObject.activeInHierarchy}");
     }
 
     void OnDisable()
@@ -109,6 +150,7 @@ public class KarmaFlowerUI : MonoBehaviour
             KarmaManager.Instance.OnKarmaChanged -= HandleKarmaChanged;
             KarmaManager.Instance.OnKarmaLevelUp -= HandleLevelUp;
         }
+        isSubscribed = false;
     }
 
     // ─── Event Handlers ───────────────────────────────────────
@@ -117,10 +159,16 @@ public class KarmaFlowerUI : MonoBehaviour
     {
         if (KarmaManager.Instance == null) return;
 
+        float progress = KarmaManager.Instance.CurrentLevelProgress;
+        Debug.Log($"KarmaFlowerUI: Karma changed! Total={newTotal}, Delta={delta}, " +
+            $"Level={KarmaManager.Instance.CurrentLevel}, Progress={progress:F3}, " +
+            $"CurrentFill={currentDisplayedFill:F3}, BarRef={progressBarFill != null}");
+
         UpdateDisplay(
             newTotal,
             KarmaManager.Instance.CurrentLevel,
-            KarmaManager.Instance.CurrentLevelProgress
+            progress,
+            delta
         );
 
         // Play gain/loss sound
@@ -148,18 +196,45 @@ public class KarmaFlowerUI : MonoBehaviour
         if (audioSource != null && levelUpSound != null)
             audioSource.PlayOneShot(levelUpSound);
 
+        // After level-up, the bar resets — set displayed fill to 0
+        // so the next UpdateDisplay animates from zero
+        currentDisplayedFill = 0f;
+
         Debug.Log($"KarmaFlowerUI: Level up! New level: {newLevel}");
     }
 
     // ─── Display Update ───────────────────────────────────────
 
-    private void UpdateDisplay(int karma, int level, float progress)
+    private void UpdateDisplay(int karma, int level, float progress, int delta = 0)
     {
-        // Update progress bar
+        // Update progress bar (animated if delta != 0)
         if (progressBarFill != null)
         {
-            progressBarFill.fillAmount = progress;
-            progressBarFill.color = barFillColor;
+            if (delta != 0)
+            {
+                if (gameObject.activeInHierarchy)
+                {
+                    // Animate from current displayed fill to target
+                    if (fillCoroutine != null) StopCoroutine(fillCoroutine);
+                    fillCoroutine = StartCoroutine(AnimateFillCoroutine(
+                        currentDisplayedFill, progress, delta > 0));
+                }
+                else
+                {
+                    // Gameobject not active — can't run coroutine, set instantly
+                    Debug.LogWarning("KarmaFlowerUI: GameObject not active, setting fill instantly.");
+                    progressBarFill.fillAmount = progress;
+                    progressBarFill.color = barFillColor;
+                    currentDisplayedFill = progress;
+                }
+            }
+            else
+            {
+                // Instant set (initialization, no delta)
+                progressBarFill.fillAmount = progress;
+                progressBarFill.color = barFillColor;
+                currentDisplayedFill = progress;
+            }
         }
 
         // Update level text
@@ -189,6 +264,39 @@ public class KarmaFlowerUI : MonoBehaviour
             bool isLit = i < currentLevel;
             petalImages[i].color = isLit ? litPetalColor : unlitPetalColor;
         }
+    }
+
+    // ─── Fill Animation ──────────────────────────────────────
+
+    private IEnumerator AnimateFillCoroutine(float from, float to, bool isGain)
+    {
+        Debug.Log($"KarmaFlowerUI: Animating fill {from:F3} → {to:F3} (gain={isGain})");
+
+        float elapsed = 0f;
+        Color animColor = isGain ? barGainColor : barFillColor;
+
+        // Green pulse during gain animation
+        progressBarFill.color = animColor;
+
+        while (elapsed < fillAnimDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / fillAnimDuration;
+            // Ease-out curve: fast start, slow finish
+            float eased = 1f - (1f - t) * (1f - t);
+            float fill = Mathf.Lerp(from, to, eased);
+            progressBarFill.fillAmount = fill;
+            yield return null;
+        }
+
+        progressBarFill.fillAmount = to;
+        currentDisplayedFill = to;
+
+        // Return to normal bar color
+        progressBarFill.color = barFillColor;
+        fillCoroutine = null;
+
+        Debug.Log($"KarmaFlowerUI: Fill animation complete. fillAmount={to:F3}");
     }
 
     // ─── Level Up Flash ───────────────────────────────────────

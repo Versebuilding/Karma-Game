@@ -219,8 +219,8 @@ public class GhostNPC : MonoBehaviour
                 // how far below the pivot the mesh extends. We need to raise
                 // the agent by that amount so the mesh bottom sits at ground.
                 float meshBottomLocal = transform.InverseTransformPoint(meshRenderer.bounds.min).y;
-                groundOffset = Mathf.Max(0f, -meshBottomLocal) + 0.5f; // +0.5 padding to sit above terrain
-                Debug.Log($"GhostNPC '{gameObject.name}': Auto-detected groundOffset = {groundOffset:F2} (includes 0.5 padding)");
+                groundOffset = Mathf.Max(0f, -meshBottomLocal) + 0.1f; // +0.1 small padding above terrain
+                Debug.Log($"GhostNPC '{gameObject.name}': Auto-detected groundOffset = {groundOffset:F2}");
             }
             else
             {

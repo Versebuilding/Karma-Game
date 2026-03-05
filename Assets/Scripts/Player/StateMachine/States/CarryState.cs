@@ -3,6 +3,10 @@ using UnityEngine;
 /// <summary>
 /// Handles carrying objects: slower movement, drop (E), throw (left click), stack.
 /// Transitions to: GroundedState (drop/throw), AirborneState (fall off edge)
+///
+/// Elegance features:
+///   - Safe drop: SphereCast to avoid dropping through walls
+///   - Weight-affected throw: heavier objects travel shorter (force / weight)
 /// </summary>
 public class CarryState : PlayerState
 {
@@ -65,6 +69,8 @@ public class CarryState : PlayerState
         player.anim.SetCarrying(false);
     }
 
+    // ─── Drop (with obstacle avoidance) ─────────────────────────
+
     private void DropObject()
     {
         if (player.carriedObject == null) return;
@@ -72,12 +78,42 @@ public class CarryState : PlayerState
         var pickup = player.carriedObject.GetComponent<PickupObject>();
         if (pickup != null)
         {
-            Vector3 dropPos = player.transform.position + player.transform.forward * 2f;
+            Vector3 dropPos = FindSafeDropPosition();
             pickup.Drop(dropPos);
         }
 
         player.carriedObject = null;
     }
+
+    /// <summary>
+    /// Find a safe position to drop the carried object.
+    /// Tries forward first, then sides, then behind, then feet.
+    /// </summary>
+    private Vector3 FindSafeDropPosition()
+    {
+        float dropDistance = 2f;
+        float checkRadius = 0.3f;
+        Vector3 origin = player.carryPoint.position;
+
+        // Try forward, right, left, behind
+        Vector3[] directions = {
+            player.transform.forward,
+            player.transform.right,
+            -player.transform.right,
+            -player.transform.forward
+        };
+
+        foreach (var dir in directions)
+        {
+            if (!Physics.SphereCast(origin, checkRadius, dir, out _, dropDistance))
+                return origin + dir * dropDistance;
+        }
+
+        // Fallback: drop at player's feet
+        return player.transform.position + Vector3.up * 0.5f;
+    }
+
+    // ─── Throw (weight-affected) ────────────────────────────────
 
     private void ThrowObject()
     {
@@ -88,7 +124,10 @@ public class CarryState : PlayerState
         {
             Vector3 throwDir = Quaternion.Euler(-player.throwUpAngle, 0f, 0f)
                 * player.transform.forward;
-            pickup.Throw(throwDir * player.throwForce);
+
+            // Weight affects throw distance: heavier = less force
+            float effectiveForce = player.throwForce / Mathf.Max(pickup.weight, 0.1f);
+            pickup.Throw(throwDir * effectiveForce);
             player.anim.TriggerThrow();
         }
 

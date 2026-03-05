@@ -1,12 +1,18 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Centralized interface for all player animation parameter management.
 /// Attach to the child object with the Animator, or the root (auto-finds Animator).
+///
+/// Optimization: Caches valid parameter hashes in a HashSet during Awake().
+/// This replaces try-catch on every SetBool/SetFloat/SetTrigger call (~10+/frame)
+/// with a zero-allocation O(1) HashSet lookup.
 /// </summary>
 public class PlayerAnimationHandler : MonoBehaviour
 {
     private Animator animator;
+    private HashSet<int> validParams;
 
     // Cached parameter hashes
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
@@ -28,13 +34,21 @@ public class PlayerAnimationHandler : MonoBehaviour
         animator = GetComponent<Animator>();
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
+
+        // Cache all valid parameter hashes once at startup
+        validParams = new HashSet<int>();
+        if (animator != null)
+        {
+            foreach (var param in animator.parameters)
+                validParams.Add(param.nameHash);
+        }
     }
 
     // --- Continuous parameters ---
 
     public void SetSpeed(float speed)
     {
-        if (animator != null)
+        if (animator != null && validParams.Contains(SpeedHash))
             animator.SetFloat(SpeedHash, speed, 0.1f, Time.deltaTime);
     }
 
@@ -100,32 +114,23 @@ public class PlayerAnimationHandler : MonoBehaviour
         SetTriggerSafe(StumbleHash);
     }
 
-    // --- Safe setters (don't error if parameter doesn't exist yet in animator) ---
+    // --- Safe setters (check cached parameter existence, no try-catch) ---
 
     private void SetBoolSafe(int hash, bool value)
     {
-        if (animator != null)
-        {
-            try { animator.SetBool(hash, value); }
-            catch { } // Parameter may not exist yet in the animator controller
-        }
+        if (animator != null && validParams.Contains(hash))
+            animator.SetBool(hash, value);
     }
 
     private void SetFloatSafe(int hash, float value)
     {
-        if (animator != null)
-        {
-            try { animator.SetFloat(hash, value); }
-            catch { }
-        }
+        if (animator != null && validParams.Contains(hash))
+            animator.SetFloat(hash, value);
     }
 
     private void SetTriggerSafe(int hash)
     {
-        if (animator != null)
-        {
-            try { animator.SetTrigger(hash); }
-            catch { }
-        }
+        if (animator != null && validParams.Contains(hash))
+            animator.SetTrigger(hash);
     }
 }
