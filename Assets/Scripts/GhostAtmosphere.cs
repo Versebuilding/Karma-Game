@@ -94,38 +94,14 @@ public class GhostAtmosphere : MonoBehaviour
 
         var profile = ScriptableObject.CreateInstance<VolumeProfile>();
 
-        // ── Color Adjustments: desaturation + cool temperature ──
-        var colorAdj = profile.Add<ColorAdjustments>();
-        colorAdj.saturation.Override(saturation);
-        colorAdj.colorFilter.Override(new Color(0.85f, 0.9f, 1f, 1f)); // slight cool tint
-
-        // ── White Balance: cool temperature ──
-        var whiteBalance = profile.Add<WhiteBalance>();
-        whiteBalance.temperature.Override(temperature);
-
-        // ── Bloom: soft ethereal glow ──
+        // ── Bloom: soft ethereal glow (only filter kept — not a color alteration) ──
         var bloom = profile.Add<Bloom>();
         bloom.threshold.Override(bloomThreshold);
         bloom.intensity.Override(lowQuality ? bloomIntensity * 0.5f : bloomIntensity);
         bloom.scatter.Override(bloomScatter);
 
-        // ── Vignette: darkened edges ──
-        var vignette = profile.Add<Vignette>();
-        vignette.intensity.Override(vignetteIntensity);
-        vignette.color.Override(new Color(0.1f, 0.05f, 0.15f, 1f)); // dark purple tint
-
-        // ── PC-only effects (skipped on mobile for performance) ──
-        if (!lowQuality)
-        {
-            // Film Grain: subtle noise for eerie feel
-            var filmGrain = profile.Add<FilmGrain>();
-            filmGrain.type.Override(FilmGrainLookup.Medium3);
-            filmGrain.intensity.Override(filmGrainIntensity);
-
-            // Chromatic Aberration: very subtle color fringing
-            var chromAb = profile.Add<ChromaticAberration>();
-            chromAb.intensity.Override(chromaticAberrationIntensity);
-        }
+        // NOTE: Desaturation, vignette, film grain, chromatic aberration, white balance,
+        // and color filter have been removed to let world colors render naturally.
 
         atmosphereVolume.profile = profile;
 
