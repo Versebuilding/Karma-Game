@@ -58,8 +58,8 @@ public class NPCSpeechBubble : MonoBehaviour
     [Tooltip("Text color for speech")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Tooltip("Maximum characters to show (truncates with ...)")]
-    [SerializeField] private int maxDisplayChars = 80;
+    [Tooltip("Maximum characters to show (truncates with ...). Set high to avoid truncation.")]
+    [SerializeField] private int maxDisplayChars = 500;
 
     [Header("Typewriter Effect")]
     [Tooltip("Enable typewriter text reveal in the speech bubble")]
@@ -179,7 +179,7 @@ public class NPCSpeechBubble : MonoBehaviour
         var canvasRect = GetComponent<RectTransform>();
         if (canvasRect != null)
         {
-            canvasRect.sizeDelta = new Vector2(300, 100);
+            canvasRect.sizeDelta = new Vector2(300, 400);
             canvasRect.localScale = Vector3.one * 0.01f;
             canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above the offset point
         }
@@ -429,7 +429,7 @@ public class NPCSpeechBubble : MonoBehaviour
         var canvasRect = GetComponent<RectTransform>();
         if (canvasRect != null)
         {
-            canvasRect.sizeDelta = new Vector2(300, 100);
+            canvasRect.sizeDelta = new Vector2(300, 400);
             canvasRect.localScale = Vector3.one * 0.01f; // world space scale
             canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above offset
         }
