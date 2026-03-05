@@ -153,6 +153,7 @@ public class GhostNPC : MonoBehaviour
 
     // Animator parameter hashes (cached for performance)
     private int hashSpeed;
+    private bool hasSpeedParam;
     private int hashGreet;
     private int hashScream;
 
@@ -208,6 +209,20 @@ public class GhostNPC : MonoBehaviour
         hashSpeed = Animator.StringToHash(speedParam);
         hashGreet = Animator.StringToHash(greetTrigger);
         hashScream = Animator.StringToHash(screamTrigger);
+
+        // Check if speed parameter exists in the animator (avoids per-frame warnings)
+        hasSpeedParam = false;
+        if (animator != null)
+        {
+            foreach (var param in animator.parameters)
+            {
+                if (param.nameHash == hashSpeed && param.type == AnimatorControllerParameterType.Float)
+                {
+                    hasSpeedParam = true;
+                    break;
+                }
+            }
+        }
 
         // Auto-detect ground offset from child mesh bounds
         if (autoDetectGroundOffset || groundOffset <= 0f)
@@ -662,20 +677,15 @@ public class GhostNPC : MonoBehaviour
     {
         if (animator == null) return;
 
+        if (!hasSpeedParam) return;
+
         float speed = 0f;
         if (currentState == GhostState.Roaming && agent != null)
         {
             speed = agent.velocity.magnitude / Mathf.Max(roamSpeed, 0.01f);
         }
 
-        try
-        {
-            animator.SetFloat(hashSpeed, speed);
-        }
-        catch
-        {
-            // Parameter might not exist yet — that's fine
-        }
+        animator.SetFloat(hashSpeed, speed);
     }
 
     private float GetCurrentClipLength()

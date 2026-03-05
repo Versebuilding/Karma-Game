@@ -201,26 +201,25 @@ public class SparkleVFX : MonoBehaviour
     /// </summary>
     private Material GetDefaultParticleMaterial()
     {
-        // Try Unity's built-in Default-Particle material
-        Material mat = Resources.GetBuiltinResource<Material>("Default-Particle.mat");
+        // URP project: try URP particle shader first (most likely to exist)
+        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (shader == null)
+            shader = Shader.Find("Particles/Standard Unlit");
+        if (shader == null)
+            shader = Shader.Find("Mobile/Particles/Additive");
 
-        if (mat == null)
+        if (shader != null)
         {
-            // Fallback: create a simple additive material
-            Shader shader = Shader.Find("Particles/Standard Unlit");
-            if (shader == null)
-                shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (shader == null)
-                shader = Shader.Find("Mobile/Particles/Additive");
-
-            if (shader != null)
-            {
-                mat = new Material(shader);
-                mat.SetFloat("_Mode", 1f); // additive
-            }
+            Material mat = new Material(shader);
+            // URP Particles/Unlit: set surface type to Additive for glow
+            mat.SetFloat("_Surface", 1f); // 0=Opaque, 1=Transparent
+            mat.SetFloat("_Blend", 1f);   // 0=Alpha, 1=Additive
+            return mat;
         }
 
-        return mat;
+        // Last resort: try built-in default particle material
+        Material builtIn = Resources.GetBuiltinResource<Material>("Default-Particle.mat");
+        return builtIn;
     }
 
     // ─── Auto-Deactivate ─────────────────────────────────────
