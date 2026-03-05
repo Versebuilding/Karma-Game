@@ -30,12 +30,16 @@ public class ThirdPersonCamera : MonoBehaviour
     // ─── Dialogue Framing ────────────────────────────────────
     [Header("Dialogue Framing")]
     [Tooltip("Horizontal offset to the right for over-the-shoulder framing")]
-    [Range(0f, 2.5f)]
-    [SerializeField] private float shoulderOffset = 1.3f;
+    [Range(0f, 3f)]
+    [SerializeField] private float shoulderOffset = 1.8f;
+
+    [Tooltip("Forward offset toward the NPC (positive = camera closer to conversation midpoint)")]
+    [Range(0f, 5f)]
+    [SerializeField] private float dialogueForwardOffset = 1.5f;
 
     [Tooltip("Vertical offset during dialogue (negative = camera lower, slight upward angle)")]
-    [Range(-2f, 0f)]
-    [SerializeField] private float dialogueVerticalOffset = -0.4f;
+    [Range(-2f, 1f)]
+    [SerializeField] private float dialogueVerticalOffset = 0.2f;
 
     [Tooltip("Transition speed into/out of dialogue camera")]
     [SerializeField] private float dialogueTransitionSpeed = 5f;
@@ -43,8 +47,8 @@ public class ThirdPersonCamera : MonoBehaviour
     // ─── Dialogue Zoom ───────────────────────────────────────
     [Header("Dialogue Zoom")]
     [Tooltip("FOV during dialogue (narrower = more zoomed in on NPC)")]
-    [Range(20f, 60f)]
-    [SerializeField] private float dialogueFOV = 40f;
+    [Range(20f, 70f)]
+    [SerializeField] private float dialogueFOV = 50f;
 
     [Tooltip("Speed of FOV and DoF transitions")]
     [SerializeField] private float effectTransitionSpeed = 4f;
@@ -263,13 +267,15 @@ public class ThirdPersonCamera : MonoBehaviour
         if (dirToNPC.sqrMagnitude < 0.01f) return;
         dirToNPC.Normalize();
 
-        // ── Right shoulder offset ──
+        // ── Shoulder + forward offset ──
         // Cross(up, dirToNPC) gives the right-hand perpendicular direction.
         // Moving the rig to the right shifts the camera right, pushing
         // the player silhouette left of frame and revealing the NPC.
+        // Forward offset pushes the camera closer to the conversation midpoint.
         Vector3 right = Vector3.Cross(Vector3.up, dirToNPC).normalized;
         Vector3 targetPos = player.position
             + right * shoulderOffset
+            + dirToNPC * dialogueForwardOffset
             + Vector3.up * dialogueVerticalOffset;
 
         float t = dialogueTransitionSpeed * Time.deltaTime;
