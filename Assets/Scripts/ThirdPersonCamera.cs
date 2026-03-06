@@ -191,7 +191,9 @@ public class ThirdPersonCamera : MonoBehaviour
     private void HandleDialogueStarted(DialogueSO dialogue)
     {
         isInDialogue = true;
-        npcTarget = DialogueManager.Instance.ActiveNPCTransform;
+        npcTarget = DialogueManager.Instance != null
+            ? DialogueManager.Instance.ActiveNPCTransform
+            : null;
     }
 
     private void HandleDialogueEnded()

@@ -144,6 +144,44 @@ public class GameSystemsSetup
             }
         }
 
+        // Add BackgroundMusicManager
+        if (managers.GetComponent<BackgroundMusicManager>() == null)
+        {
+            Undo.AddComponent<BackgroundMusicManager>(managers);
+            Debug.Log("  + Added BackgroundMusicManager");
+        }
+        else
+        {
+            Debug.Log("  BackgroundMusicManager already attached");
+        }
+
+        // Auto-assign background track if it exists
+        var musicManager = managers.GetComponent<BackgroundMusicManager>();
+        if (musicManager != null)
+        {
+            var trackGuids = AssetDatabase.FindAssets("GameBackgroundTrack t:AudioClip");
+            if (trackGuids.Length > 0)
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(
+                    AssetDatabase.GUIDToAssetPath(trackGuids[0]));
+                if (clip != null)
+                {
+                    var musicSo = new SerializedObject(musicManager);
+                    var trackProp = musicSo.FindProperty("backgroundTrack");
+                    if (trackProp != null)
+                    {
+                        trackProp.objectReferenceValue = clip;
+                        musicSo.ApplyModifiedProperties();
+                        Debug.Log($"  Assigned background track: {clip.name}");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("  ! No 'GameBackgroundTrack' audio clip found in Assets/Audio/.");
+            }
+        }
+
         // Try to assign KarmaConfig
         var karmaManager = managers.GetComponent<KarmaManager>();
         if (karmaManager != null)

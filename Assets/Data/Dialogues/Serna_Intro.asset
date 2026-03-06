@@ -20,7 +20,7 @@ MonoBehaviour:
       stuck like this!
 
 '
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: a7a5cfd41fc4f4a6ebde556dcad2978f, type: 3}
     nodeAnimation: {fileID: 0}
     choices: []
     nextNodeId: 2
@@ -31,7 +31,7 @@ MonoBehaviour:
     speakerName: Serna
     dialogueText: Hi Im Serna and Im tired of eating endlessly, can you help me break
       free from this curse?
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: d5291b2197ed14da09160f44980f13cb, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: 2fced5bfca0e145aabd7f791906e238c, type: 3}
     choices:
     - choiceText: Of course, Serna. I'd like to help you.
@@ -41,6 +41,7 @@ MonoBehaviour:
       coinChange: 20
       requiredKarmaLevel: 0
       choiceStyle: 0
+      voiceClip: {fileID: 8300000, guid: 80ca70cb1ba5646368d0ea86d5014943, type: 3}
       conditions: []
       actions: []
     - choiceText: Curses aren't real! What are you 4?
@@ -50,6 +51,7 @@ MonoBehaviour:
       coinChange: 0
       requiredKarmaLevel: 0
       choiceStyle: 1
+      voiceClip: {fileID: 8300000, guid: 120a9443a27a3405ca470bb04f78fbf2, type: 3}
       conditions: []
       actions: []
     - choiceText: Tell me more about this curse.
@@ -59,6 +61,7 @@ MonoBehaviour:
       coinChange: 0
       requiredKarmaLevel: 0
       choiceStyle: 2
+      voiceClip: {fileID: 8300000, guid: 267993974ef054f7e8dfdcfb472fe39c, type: 3}
       conditions: []
       actions: []
     nextNodeId: 
@@ -72,10 +75,10 @@ MonoBehaviour:
       The food needs to be blessed by a monk and until then, I have to keep eating
       all this food falling from the sky as a form of karma to repent for all my
       past deeds
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: c100d99da2dcf44a2b33de5234260c7e, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: 17728860f61a448389561f2bde966935, type: 3}
     choices: []
-    nextNodeId: 5.1
+    nextNodeId: 6
     isEnd: 0
     conditions: []
     onShowActions: []
@@ -83,7 +86,7 @@ MonoBehaviour:
     speakerName: Serna
     dialogueText: You, you wouldn't know a curse even if it was staring right at
       your face you ignorant child.
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: f8b4db8e7b388424590f75f3bed1f764, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: 25ac94fd8195e4a7095b8a8ec3b2d584, type: 3}
     choices: []
     nextNodeId: 5.2
@@ -94,7 +97,7 @@ MonoBehaviour:
     speakerName: Serna
     dialogueText: 'Of course...All I know about this curse is that only a blessed
       food by a monk is what can set me free. '
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: b322e037b1c0e4cca8a46ec15401339b, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: 17728860f61a448389561f2bde966935, type: 3}
     choices: []
     nextNodeId: 5.3
@@ -105,25 +108,29 @@ MonoBehaviour:
     speakerName: sammy
     dialogueText: What a coincidence! Monk Ananda just gave me a temple offering
       blessed by the monk himself!
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: c1fab40492cff41c1bf5065fb37e193b, type: 3}
     nodeAnimation: {fileID: 0}
     choices:
-    - choiceText: Share bread with Serna
+    - choiceText: '[Share bread] Here, would you like some blessed bread to set yourself
+        free?'
       inputLabel: Z
-      nextNodeId: 7.1
+      nextNodeId: 8.1
       karmaChange: 0
       coinChange: 0
       requiredKarmaLevel: 0
       choiceStyle: 0
+      voiceClip: {fileID: 8300000, guid: 3984a1dfd43384836819635ec326200e, type: 3}
       conditions: []
       actions: []
-    - choiceText: Don't offer the bread!
+    - choiceText: "[Don't offer bread] Ha-ha It smelled soooo not-great\u2026definitely
+        something funky in there. "
       inputLabel: X
-      nextNodeId: 7.2
+      nextNodeId: 8.2
       karmaChange: 0
       coinChange: 0
       requiredKarmaLevel: 0
       choiceStyle: 1
+      voiceClip: {fileID: 8300000, guid: 80ab7e99b5eae4694a66e5ca6abbc601, type: 3}
       conditions: []
       actions: []
     nextNodeId: neutral_response
@@ -134,7 +141,7 @@ MonoBehaviour:
     speakerName: Serna
     dialogueText: Anyways, only a blessed monk food can set me free from eating all
       this food falling from the sky!
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: 31c7c87e50f07477392e6e5cf789626d, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: c4900afa99af04652a0acd745971d6d1, type: 3}
     choices: []
     nextNodeId: 6
@@ -145,18 +152,8 @@ MonoBehaviour:
     speakerName: Serna
     dialogueText: Until then, I have to keep eating all this food falling from the
       sky.
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: ebc5cab55496044538caf58dc75e7cb4, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: 06e8c6269710b41148666381cda147a8, type: 3}
-    choices: []
-    nextNodeId: 6
-    isEnd: 0
-    conditions: []
-    onShowActions: []
-  - nodeId: 5.1
-    speakerName: Serna
-    dialogueText: You seem to be a kind person I can tell you have places to go!
-    voiceClip: {fileID: 0}
-    nodeAnimation: {fileID: 0}
     choices: []
     nextNodeId: 6
     isEnd: 0
@@ -168,7 +165,7 @@ MonoBehaviour:
       for that sugar!
 
 '
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: 27105a72bb86b47ee83620f88dbe8bee, type: 3}
     nodeAnimation: {fileID: 0}
     choices: []
     nextNodeId: 3
@@ -179,7 +176,7 @@ MonoBehaviour:
     speakerName: Serna
     dialogueText: Wow! Are you for real! Is this truly happening? Am I going to be
       free after all this time! Free from all this food-eating misery!
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: 50e13d59b09da4190a8af6dcf2e452fe, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: 04ad1376b575a4bc48c315edfb9e4c11, type: 3}
     choices: []
     nextNodeId: 
@@ -190,16 +187,18 @@ MonoBehaviour:
     speakerName: Serna
     dialogueText: So-can I have some of the bread? Du-uh! Aren't you being the selfish
       one and they call me the hungry ghost here, wha-at!
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: 96ec3076f6e754d299a8f332266268f4, type: 3}
     nodeAnimation: {fileID: -203655887218126122, guid: 25ac94fd8195e4a7095b8a8ec3b2d584, type: 3}
     choices:
-    - choiceText: Share the bread
+    - choiceText: '[Share bread] Yeah-no-ofcourse- I have some of that blessed bread
+        for you, here go set yourself free!'
       inputLabel: Z
-      nextNodeId: 9.1
+      nextNodeId: 9.2
       karmaChange: 0
       coinChange: 0
       requiredKarmaLevel: 0
       choiceStyle: 0
+      voiceClip: {fileID: 8300000, guid: b5f2e0160ea4741689cede12b00c9547, type: 3}
       conditions: []
       actions: []
     nextNodeId: end_sernaBread
@@ -209,7 +208,7 @@ MonoBehaviour:
   - nodeId: 9.2
     speakerName: Serna
     dialogueText: Wasn't that difficult now was it? Thanks!
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: a6cac3f4db5354a7c889b59c41112af2, type: 3}
     nodeAnimation: {fileID: 0}
     choices: []
     nextNodeId: 
@@ -217,34 +216,12 @@ MonoBehaviour:
     conditions: []
     onShowActions: []
   - nodeId: 7.1
-    speakerName: 
+    speakerName: sammy
     dialogueText: Here, would you like some blessed bread to set yourself free?
-    voiceClip: {fileID: 0}
+    voiceClip: {fileID: 8300000, guid: 3984a1dfd43384836819635ec326200e, type: 3}
     nodeAnimation: {fileID: 0}
     choices: []
     nextNodeId: 8.1
-    isEnd: 0
-    conditions: []
-    onShowActions: []
-  - nodeId: 7.2
-    speakerName: sammy
-    dialogueText: "Ha-ha It smelled soooo not-great\u2026definitely something funky
-      in there.\n"
-    voiceClip: {fileID: 0}
-    nodeAnimation: {fileID: 0}
-    choices: []
-    nextNodeId: 8.2
-    isEnd: 0
-    conditions: []
-    onShowActions: []
-  - nodeId: 9.1
-    speakerName: sammy
-    dialogueText: Yeah-no-ofcourse- I have some of that blessed bread for you, [laughingly]
-      here go set yourself free!
-    voiceClip: {fileID: 0}
-    nodeAnimation: {fileID: 0}
-    choices: []
-    nextNodeId: 9.2
     isEnd: 0
     conditions: []
     onShowActions: []

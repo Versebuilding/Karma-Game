@@ -81,8 +81,8 @@
 | File | Class | Purpose |
 |------|-------|---------|
 | `NPCBase.cs` | NPCBase | Abstract base for all NPCs. Detection radius, FacePlayer(), audio helpers, proximity events. |
-| `DialogueNPC.cs` | DialogueNPC | Extends InteractableBase (NOT NPCBase — required by InteractionDetector's GetComponent). QuickOutline pulsing, SernaAnimCycler, audio fade, ends dialogue on walk-away. Sets DialogueManager.ActiveNPCTransform. FacePlayerTowardNPC() rotates player toward NPC during dialogue. Per-node voiceClip + nodeAnimation playback via HandleNodeChanged. Default animation Inspector fields: defaultIdleClips[], defaultTalkClips[], defaultAnimChangeInterval — overrides SernaAnimCycler when populated. |
-| `GhostNPC.cs` | GhostNPC | NavMesh roaming ghosts with 3 states (Roaming/Paused/Reacting). Karma evaluator for behavior. Greet/Scream reactions. |
+| `DialogueNPC.cs` | DialogueNPC | Extends InteractableBase (NOT NPCBase — required by InteractionDetector's GetComponent). QuickOutline pulsing, SernaAnimCycler, audio fade, ends dialogue on walk-away. Sets DialogueManager.ActiveNPCTransform. FacePlayerTowardNPC() rotates player toward NPC during dialogue. Per-node voiceClip + nodeAnimation playback via HandleNodeChanged. TryCrossFade() helper checks Animator.HasState() before CrossFade (prevents errors for missing states). Default animation Inspector fields: defaultIdleClips[], defaultTalkClips[], defaultAnimChangeInterval — overrides SernaAnimCycler when populated. |
+| `GhostNPC.cs` | GhostNPC | NavMesh roaming ghosts with 3 states (Roaming/Paused/Reacting). Karma evaluator for behavior. Greet/Scream reactions. hasSpeedParam flag caches whether animator has Speed parameter (prevents warning spam). |
 | `GhostFloatEffect.cs` | GhostFloatEffect | Visual-only sine-wave floating/bobbing. Independent of GhostNPC movement. |
 
 ### Managers — `Assets/Scripts/Managers/`
@@ -93,6 +93,7 @@
 | `DialogueManager.cs` | DialogueManager | Yes (DontDestroyOnLoad) | OnDialogueStarted, OnNodeChanged, OnChoiceMade, OnDialogueEnded. Properties: ActiveNPCSpeakerName, ActiveNPCTransform, CurrentNode, IsDialogueActive. One-time rewards: runtime HashSet<string> check per choice (`rewarded_{dialogueId}_{nodeId}_{choiceIndex}`) — resets each Play session (avoids ScriptableObject persistence bug). ClearRewardedChoices() for mid-session reset. |
 | `WalletManager.cs` | WalletManager | Yes (DontDestroyOnLoad) | OnCoinsChanged(total, delta). StartingCoins property for reset. |
 | `HUDManager.cs` | HUDManager | Yes | Bridges manager events to UI |
+| `BackgroundMusicManager.cs` | BackgroundMusicManager | Yes (DontDestroyOnLoad) | Plays GameBackgroundTrack.mp3 on loop. Auto-ducks volume when any other AudioSource plays (coroutine scans every 0.15s, cache refreshes every 2s). Smooth fade via MoveTowards in Update. normalVolume=0.4, duckedVolume=0.15, duckFadeSpeed=2. Public API: ForceDuck/ForceUnduck, PauseMusic/ResumeMusic, SetNormalVolume. |
 
 ### Data Models — `Assets/Scripts/Data/`
 
@@ -124,7 +125,7 @@
 
 | File | Class | Purpose |
 |------|-------|---------|
-| `SparkleVFX.cs` | SparkleVFX | Code-configured ParticleSystem burst. Faded yellow orbs (25 particles, 0.8s, alpha fade + shrink). Auto-deactivates for pooling. Play()/Play(Vector3). |
+| `SparkleVFX.cs` | SparkleVFX | Code-configured ParticleSystem burst. Faded yellow orbs (25 particles, 0.8s, alpha fade + shrink). Auto-deactivates for pooling. Play()/Play(Vector3). URP-safe material loading: tries URP Particles/Unlit shader first, falls back to Particles/Standard Unlit. |
 | `SparkleVFXManager.cs` | SparkleVFXManager | Singleton pool/spawner (default 5 instances). PlayAt(pos), PlayAtTransform(target), PlayAtPlayer(). Auto-expands pool. |
 
 ### Environment — `Assets/Scripts/Environment/`
@@ -134,6 +135,9 @@
 | `Lever.cs` | Lever | Pullable lever triggers. |
 | `PressurePlate.cs` | PressurePlate | Weight-triggered plates. |
 | `TriggerZone.cs` | TriggerZone | General-purpose trigger zones. |
+| `FoodRainManager.cs` | FoodRainManager | "Cloudy with a Chance of Meatballs" food rain. Object-pooled 3D food falling from sky. StartRain()/StopRain() API. Auto-loads prefabs from `Assets/Prefab/Environment/Food`. Auto-detects tiny models (mesh bounds check) and applies scale multiplier. Auto-assigns fallback URP material if renderers have null materials. Creates placeholder cubes if no meshes found. Preserves FBX -90° X rotation on prefab variants. Gizmos for spawn area/ground/vanish zone. |
+| `FallingFood.cs` | FallingFood | Per-food behavior (fall, tumble, shrink near ground, deactivate at groundLevel). Managed by FoodRainManager pool — do NOT add manually. |
+| `GhostBlocker.cs` | GhostBlocker | Invisible wall that blocks ghosts (NavMesh obstacle). |
 
 ### UI System — `Assets/Scripts/UI/`
 
@@ -145,7 +149,7 @@
 | `CoinCounterUI.cs` | CoinCounterUI | Coin icon + text. Delta popup animations (+green, -red). AudioSource for coin sounds. |
 | `KarmaPopupUI.cs` | KarmaPopupUI | 3-phase fly-to-target animation: pop-in (scale 0→1.3→1) → pause → fly to KarmaFlower (ease-in). Green color for gains, red for losses. PunchTargetCoroutine on landing. TrySubscribe + Start() fallback. |
 | `CoinFlyUI.cs` | CoinFlyUI | Spawns 3 gold circle Images at screen center. Pop-in → pause → stagger-fly to CoinCounter (ease-in-out). Only for positive deltas. PunchTargetCoroutine on last coin. TrySubscribe + Start() fallback. |
-| `NPCSpeechBubble.cs` | NPCSpeechBubble | World-space speech bubble above NPCs at worldOffset (0,5,0). Dynamic height from renderer bounds + heightPadding=0.2. Brown name badge + speech text. Auto-billboards to camera. Typewriter effect (useTypewriter=true, 35 chars/sec) with IsTypewriting/SkipTypewriter() API for DialogueUI coordination. Continue prompt "Press Enter >>" shown after typewriter finishes. Fade in/out animation. Auto-migration for worldOffset, prompt text, heightPadding. TrySubscribe + Start() fallback. |
+| `NPCSpeechBubble.cs` | NPCSpeechBubble | World-space speech bubble above NPCs at worldOffset (0,5,0). Dynamic height from renderer bounds + heightPadding=0.2. Brown name badge + speech text. Auto-billboards to camera. maxDisplayChars=500 (was 80 — increased to avoid truncation; bubble grows vertically via ContentSizeFitter). Canvas sizeDelta (300,400) for room to expand. Typewriter effect (useTypewriter=true, 35 chars/sec) with IsTypewriting/SkipTypewriter() API for DialogueUI coordination. Continue prompt "Press Enter >>" shown after typewriter finishes. Fade in/out animation. Auto-migration for worldOffset, prompt text, heightPadding. TrySubscribe + Start() fallback. |
 | `ResetGameButton.cs` | ResetGameButton | Resets karma/coins/VariableStore, clears DialogueManager.rewardedChoices, and reloads scene. Managers survive via DontDestroyOnLoad, reset state before reload. |
 | `FPSCounter.cs` | FPSCounter | Debug FPS display (top-right corner). |
 | `HUDManager.cs` | HUDManager | Top-level HUD coordination. Bridges manager events to UI. Subscribes to InteractionDetector for "Press E" prompt. |
@@ -154,7 +158,8 @@
 
 | File | Class | Purpose |
 |------|-------|---------|
-| `ThirdPersonCamera.cs` | ThirdPersonCamera | CameraRig parent with child Main Camera. Two modes: Follow (rig at player, rotation matches player Y) + Dialogue (rig at player, rotates toward NPC — child offset creates over-the-shoulder shot). Subscribes to DialogueManager events via TrySubscribe. |
+| `ThirdPersonCamera.cs` | ThirdPersonCamera | CameraRig parent with child Main Camera. Two modes: Follow (rig at player, rotation matches player Y) + Dialogue (rig offset right via shoulderOffset=2.5, looks AT NPC from rig position for proper framing, dialogueFOV=50). Subscribes to DialogueManager events via TrySubscribe. |
+| `GhostAtmosphere.cs` | GhostAtmosphere | URP Volume controller — stripped to Bloom only (all color filters removed: ColorAdjustments, WhiteBalance, Vignette, FilmGrain, ChromaticAberration). |
 | `SkyboxController.cs` | SkyboxController | Day/night skybox cycle. |
 | `SernaAnimCycler.cs` | SernaAnimCycler | Serna idle/talk animation variant cycling (3 idles, 3 talks). |
 | `SernaInteraction.cs` | SernaInteraction | **LEGACY** — replaced by DialogueNPC. |
@@ -165,7 +170,7 @@
 
 | File | Class | Menu Item | Purpose |
 |------|-------|-----------|---------|
-| `GameSystemsSetup.cs` | GameSystemsSetup | Karma > Setup Game Systems, Karma > Quick Setup Checklist | Auto-creates GameManagers with all singletons (incl. SparkleVFXManager). Validates Player/Serna. Auto-assigns SparkleVFX prefab. |
+| `GameSystemsSetup.cs` | GameSystemsSetup | Karma > Setup Game Systems, Karma > Quick Setup Checklist | Auto-creates GameManagers with all singletons (incl. SparkleVFXManager, BackgroundMusicManager). Validates Player/Serna. Auto-assigns SparkleVFX prefab + GameBackgroundTrack audio clip. |
 | `VFXPrefabCreator.cs` | VFXPrefabCreator | Karma > Create Sparkle VFX Prefab | Creates SparkleVFX prefab at Assets/Prefab/VFX/. Auto-assigns to SparkleVFXManager in scene. |
 | `UISetupTool.cs` | UISetupTool | Karma > Build UI Canvases, Build HUD/Dialogue Canvas Only | Programmatic Canvas builder matching HUDCanvas.prefab layout. Creates HUDCanvas (sort 5) + DialogueCanvas (sort 10) + ChoiceButton prefab. GUID-based sprite/audio loading. BuildHUDCanvasOnly re-wires HUDManager via WireHUDManagerToHUD. Auto-wires all references. |
 | `PlayerAnimatorSetup.cs` | PlayerAnimatorSetup | Karma > Rebuild Player Animator | Rebuilds PlayerAnimatorController with all states/transitions. |
@@ -175,6 +180,8 @@
 | `VariableStoreBrowser.cs` | VariableStoreBrowser | Karma > Variable Store | Inspect/edit flags, counters, relationships. Add/remove/search. |
 | `Drawers/DialogueSOEditor.cs` | DialogueSOEditor | (CustomEditor) | Color-coded node cards, inline condition/action tags, expandable choices, node ID dropdowns. |
 | `Helpers/DialogueTypeCache.cs` | DialogueTypeCache | — | Reflection-based auto-discovery of all IDialogueCondition/IDialogueAction types. |
+| `AnimatorStateSync.cs` | AnimatorStateSync | Karma > Sync NPC Animator States, Karma > Sync Selected NPC Animator | Auto-adds missing animation states to NPC AnimatorController from DialogueNPC's defaultIdleClips[], defaultTalkClips[], and DialogueSO nodeAnimation fields. |
+| `FoodRainSetup.cs` | FoodRainSetup, FoodRainManagerEditor | Karma > Setup Food Rain, Karma > Fix Food FBX Materials | Creates FoodRainManager in scene, auto-loads prefabs. Fix FBX Materials diagnoses each FBX model (renderers, materials, mesh bounds, shader) and fixes materialImportMode to ImportViaMaterialDescription + reimports. Custom Inspector adds "Fix FBX Materials" + "Load Prefabs" buttons + runtime Start/Stop/Clear controls. |
 | `Helpers/DialogueEditorStyles.cs` | DialogueEditorStyles | — | Shared colors, GUIStyles, drawing helpers for editor toolkit. |
 
 ---
@@ -333,6 +340,10 @@ Assets/
 - Validate Player Setup — checks player components
 - Dialogue Editor — visual dialogue tree editor window
 - Variable Store — game variable browser/inspector
+- Setup Food Rain — creates FoodRainManager, auto-loads food prefabs
+- Fix Food FBX Materials — diagnoses and fixes FBX material import (for invisible food models)
+- Create Sparkle VFX Prefab — creates SparkleVFX prefab
+- Sync NPC Animator States — auto-adds missing animation states to NPC AnimatorControllers
 
 ## UI Canvas Hierarchy (built by UISetupTool)
 
@@ -376,7 +387,7 @@ NPC Speech Bubble (World Space Canvas, child of NPC)
 └── NPCSpeechBubble component on canvas
     └── BubblePanel (auto-built if not pre-assigned)
         ├── NameBadge (brown) → SpeakerName
-        ├── SpeechText (white, max 80 chars)
+        ├── SpeechText (white, max 500 chars, auto-height via ContentSizeFitter)
         └── ContinuePrompt ("Press Enter ▶", italic, right-aligned)
 
 ChoiceButton Prefab (Assets/Prefab/UI/ChoiceButton.prefab)
@@ -401,7 +412,8 @@ CameraRig (ThirdPersonCamera script here)
 ```
 - ThirdPersonCamera manipulates the **CameraRig** transform (position + rotation)
 - The child Main Camera's local offset creates the 3rd-person / over-the-shoulder view
-- **NEVER** directly reposition the rig to a custom position during dialogue — just rotate it toward the NPC. The child offset handles everything.
+- **Dialogue mode**: Rig positioned at player + right*shoulderOffset + up*verticalOffset. Rig looks AT the NPC from its offset position (not parallel to dirToNPC). The shoulder offset allows the camera to see around the player's body. NPC appears center-right of frame.
+- Key: rig rotation uses `LookRotation(npcCenter - transform.position)` — ensuring proper framing regardless of offset amount.
 
 ### Event Subscription Timing Pattern
 All UI/camera scripts that depend on singleton managers use this pattern:

@@ -59,6 +59,21 @@ public class ChoiceButtonUI : MonoBehaviour
     [Range(0.2f, 0.8f)]
     [SerializeField] private float lockedAlpha = 0.4f;
 
+    [Header("Text Sizing")]
+    [Tooltip("Minimum font size for choice text")]
+    [Range(12f, 24f)]
+    [SerializeField] private float minChoiceFontSize = 18f;
+
+    [Tooltip("Maximum font size for choice text")]
+    [Range(16f, 30f)]
+    [SerializeField] private float maxChoiceFontSize = 22f;
+
+    [Tooltip("Vertical padding above and below text for background auto-size")]
+    [SerializeField] private float verticalPadding = 24f;
+
+    [Tooltip("Minimum button height")]
+    [SerializeField] private float minButtonHeight = 50f;
+
     // ─── Events ───────────────────────────────────────────────
 
     /// <summary>Fired when the button is clicked. Arg: choice index.</summary>
@@ -103,6 +118,9 @@ public class ChoiceButtonUI : MonoBehaviour
         currentStyle = choice.choiceStyle;
         isSelected = false;
         ApplyStyle(choice.choiceStyle, available);
+
+        // Auto-size the button height to fit the text content (fixed width from parent)
+        AutoSizeHeight();
 
         // Wire up button click
         if (button == null)
@@ -193,6 +211,35 @@ public class ChoiceButtonUI : MonoBehaviour
             // Restore default style
             ApplyStyle(currentStyle, isAvailable);
         }
+    }
+
+    // ─── Auto-Size ──────────────────────────────────────────
+
+    /// <summary>
+    /// Auto-sizes the button height to fit the choice text content.
+    /// Width stays fixed (controlled by the parent layout group).
+    /// Applies the same min/max font sizing (24–28pt) as the dialogue UIs.
+    /// </summary>
+    private void AutoSizeHeight()
+    {
+        if (choiceText == null) return;
+
+        // Enable word wrapping and auto-sizing with the shared font range
+        choiceText.textWrappingMode = TextWrappingModes.Normal;
+        choiceText.enableAutoSizing = true;
+        choiceText.fontSizeMin = minChoiceFontSize;
+        choiceText.fontSizeMax = maxChoiceFontSize;
+        choiceText.ForceMeshUpdate();
+
+        float textHeight = choiceText.preferredHeight;
+        float targetHeight = Mathf.Max(textHeight + verticalPadding, minButtonHeight);
+
+        // Use LayoutElement.preferredHeight so the parent layout group respects this
+        var le = GetComponent<LayoutElement>();
+        if (le == null)
+            le = gameObject.AddComponent<LayoutElement>();
+
+        le.preferredHeight = targetHeight;
     }
 
     // ─── Style Application ────────────────────────────────────

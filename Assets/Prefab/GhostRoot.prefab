@@ -207,8 +207,8 @@ MonoBehaviour:
   screamClips:
   - {fileID: 8300000, guid: 779c16487e84c404984ce1a628e86742, type: 3}
   ambientClip: {fileID: 8300000, guid: 685032bd2bcbd428fbf6ed780eebd7f2, type: 3}
-  audioFadeSpeed: 2
-  maxVolume: 0.8
+  audioFadeSpeed: 1
+  maxVolume: 0.4
   animator: {fileID: 1899999910011895953}
   speedParam: Speed
   greetTrigger: Greet
@@ -241,6 +241,7 @@ GameObject:
   - component: {fileID: 6698303802957275524}
   - component: {fileID: 1899999910011895953}
   - component: {fileID: 5660415017036164492}
+  - component: {fileID: 3052129711080088053}
   m_Layer: 6
   m_Name: Ghost
   m_TagString: Untagged
@@ -358,3 +359,21 @@ MonoBehaviour:
   enableWobble: 1
   wobbleAmount: 3
   wobbleSpeed: 0.7
+--- !u!114 &3052129711080088053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5185292034319384657}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  outlineMode: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 8
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []

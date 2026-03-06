@@ -81,6 +81,18 @@ public class DialogueUI : MonoBehaviour
     [Tooltip("Padding added above/below text for auto-size")]
     [SerializeField] private float panelPadding = 60f;
 
+    [Header("Text Sizing (screen-space pixels)")]
+    [Tooltip("Default font size for dialogue text")]
+    [SerializeField] private float defaultDialogueFontSize = 20f;
+
+    [Tooltip("Minimum font size — text will never shrink below this")]
+    [Range(12f, 24f)]
+    [SerializeField] private float minDialogueFontSize = 18f;
+
+    [Tooltip("Maximum font size — text will never grow above this")]
+    [Range(16f, 30f)]
+    [SerializeField] private float maxDialogueFontSize = 22f;
+
     [Header("Layout Override")]
     [Tooltip("Override panel to fixed-width centered (0 = keep Inspector layout)")]
     [SerializeField] private float fixedPanelWidth = 1000f;
@@ -148,6 +160,14 @@ public class DialogueUI : MonoBehaviour
             fixedPanelWidth = 1000f;
         if (minPanelHeight <= 100f)
             minPanelHeight = 130f;
+
+        // Auto-migrate font sizes (min=18, default=20, max=22)
+        if (minDialogueFontSize > 24f)
+            minDialogueFontSize = 18f;
+        if (defaultDialogueFontSize > 24f)
+            defaultDialogueFontSize = 20f;
+        if (maxDialogueFontSize > 28f)
+            maxDialogueFontSize = 22f;
 
         // Ensure panel uses fixed-width centered layout (safety net if UISetupTool wasn't re-run)
         EnsureLayout();
@@ -245,7 +265,8 @@ public class DialogueUI : MonoBehaviour
             return;
         }
 
-        // Waiting for user to acknowledge NPC text before showing choices
+        // Waiting for user to acknowledge text before showing choices
+        // (applies to both NPC-speaking and Player-speaking nodes with choices)
         if (isWaitingToShowChoices)
         {
             if (Input.GetKeyDown(advanceKey1) || Input.GetKeyDown(advanceKey2) || Input.GetKeyDown(advanceKey3))
@@ -258,8 +279,19 @@ public class DialogueUI : MonoBehaviour
                     return;
                 }
 
+                // If player panel typewriter is still running, skip it first
+                if (isTypewriting)
+                {
+                    SkipTypewriter();
+                    return;
+                }
+
                 isWaitingToShowChoices = false;
-                PlayUISound(advanceSound);
+
+                // Hide player panel — choice buttons float independently
+                if (dialoguePanel != null)
+                    dialoguePanel.SetActive(false);
+
                 ShowChoices(pendingChoicesForDisplay);
                 pendingChoicesForDisplay = null;
 
@@ -353,22 +385,31 @@ public class DialogueUI : MonoBehaviour
         if (speakerNameText != null)
             speakerNameText.text = node.speakerName ?? "";
 
+        // Play the node's voice clip for player-speaking nodes.
+        // (DialogueNPC.HandleNodeChanged only plays clips for NPC-speaker nodes,
+        //  so player/Sammy voice clips must be played here.)
+        if (node.voiceClip != null)
+            PlayUISound(node.voiceClip);
+
         // Update dialogue text (with optional typewriter effect)
         fullDialogueText = node.dialogueText ?? "";
+
+        // Adapt font size to fit, then typewriter with maxVisibleCharacters
+        AdaptDialogueTextToFit(fullDialogueText);
         if (useTypewriter && fullDialogueText.Length > 0)
         {
             StartTypewriter(fullDialogueText);
-        }
-        else
-        {
-            if (dialogueText != null)
-                dialogueText.text = fullDialogueText;
         }
 
         // Choices or continue?
         if (hasChoices)
         {
-            ShowChoices(node.choices);
+            // Don't show choices yet — player reads their text first, presses Enter,
+            // THEN choices appear (same two-step flow as NPC-speaking-with-choices)
+            HideChoices();
+            ShowContinuePrompt(true);
+            isWaitingToShowChoices = true;
+            pendingChoicesForDisplay = node.choices;
         }
         else
         {
@@ -404,6 +445,14 @@ public class DialogueUI : MonoBehaviour
         pendingChoicesForDisplay = null;
 
         SetPanelVisualsVisible(true);  // Reset for next dialogue
+
+        // Reset font sizing state for next dialogue
+        if (dialogueText != null)
+        {
+            dialogueText.enableAutoSizing = false;
+            dialogueText.fontSize = defaultDialogueFontSize;
+            dialogueText.maxVisibleCharacters = int.MaxValue;
+        }
 
         if (dialoguePanel != null)
             dialoguePanel.SetActive(false);
@@ -548,6 +597,34 @@ public class DialogueUI : MonoBehaviour
         AutoSizePanel(panelHeight);
     }
 
+    /// <summary>
+    /// Configure dialogue text with auto-sizing between minDialogueFontSize and
+    /// maxDialogueFontSize. The panel background grows vertically to fit all content.
+    /// Must be called BEFORE the typewriter starts so layout is stable.
+    /// </summary>
+    private void AdaptDialogueTextToFit(string fullText)
+    {
+        if (dialogueText == null) return;
+
+        // Always use auto-sizing so TMP picks the best size in range
+        dialogueText.enableAutoSizing = true;
+        dialogueText.fontSizeMin = minDialogueFontSize;
+        dialogueText.fontSizeMax = maxDialogueFontSize;
+
+        // Prevent TMP from truncating or showing "..." — panel grows to fit
+        dialogueText.overflowMode = TextOverflowModes.Overflow;
+
+        dialogueText.text = fullText;
+        dialogueText.maxVisibleCharacters = int.MaxValue;
+
+        // Remove any height cap — let the panel grow to fit
+        var textLE = dialogueText.GetComponent<LayoutElement>();
+        if (textLE != null)
+            textLE.preferredHeight = -1;
+
+        dialogueText.ForceMeshUpdate();
+    }
+
     // ─── Continue Prompt ──────────────────────────────────────
 
     private void ShowContinuePrompt(bool show)
@@ -597,7 +674,8 @@ public class DialogueUI : MonoBehaviour
             yield break;
         }
 
-        string choiceText = currentNode.choices[choiceIndex].choiceText;
+        DialogueChoice selectedChoice = currentNode.choices[choiceIndex];
+        string choiceText = selectedChoice.choiceText;
 
         // Hide choice buttons, activate + restore panel visuals, show the player's chosen line
         HideChoices();
@@ -612,15 +690,17 @@ public class DialogueUI : MonoBehaviour
         if (speakerNameText != null)
             speakerNameText.text = playerSpeakerName;
 
-        // Play player speaking sound
-        PlayUISound(playerSpeakingSound);
+        // Play choice voice clip if assigned, otherwise fall back to generic player speaking sound
+        if (selectedChoice.voiceClip != null)
+            PlayUISound(selectedChoice.voiceClip);
+        else
+            PlayUISound(playerSpeakingSound);
 
-        // Typewriter the choice text as player dialogue
+        // Adapt font size and typewriter the choice text as player dialogue
         fullDialogueText = choiceText;
+        AdaptDialogueTextToFit(choiceText);
         if (useTypewriter && choiceText.Length > 0)
             StartTypewriter(choiceText);
-        else if (dialogueText != null)
-            dialogueText.text = choiceText;
 
         AutoSizePanelToText();
         ShowContinuePrompt(true);
@@ -641,7 +721,6 @@ public class DialogueUI : MonoBehaviour
 
         isShowingPlayerChoice = false;
         ShowContinuePrompt(false);
-        PlayUISound(advanceSound);
 
         // NOW apply karma/coins and advance to the NPC response
         DialogueManager.Instance.SelectChoice(pendingChoiceIndex);
@@ -660,7 +739,6 @@ public class DialogueUI : MonoBehaviour
             return;
         }
 
-        PlayUISound(advanceSound);
         DialogueManager.Instance.AdvanceDialogue();
     }
 
@@ -684,8 +762,9 @@ public class DialogueUI : MonoBehaviour
 
         isTypewriting = false;
 
+        // Reveal all characters (text + layout already set by AdaptDialogueTextToFit)
         if (dialogueText != null)
-            dialogueText.text = fullDialogueText;
+            dialogueText.maxVisibleCharacters = int.MaxValue;
 
         // Resize to final text
         AutoSizePanelToText();
@@ -695,15 +774,16 @@ public class DialogueUI : MonoBehaviour
     {
         isTypewriting = true;
 
+        // Text is already set by AdaptDialogueTextToFit — just hide all characters
         if (dialogueText != null)
-            dialogueText.text = "";
+            dialogueText.maxVisibleCharacters = 0;
 
         float delay = 1f / typewriterSpeed;
 
         for (int i = 0; i <= text.Length; i++)
         {
             if (dialogueText != null)
-                dialogueText.text = text.Substring(0, i);
+                dialogueText.maxVisibleCharacters = i;
 
             yield return new WaitForSeconds(delay);
         }

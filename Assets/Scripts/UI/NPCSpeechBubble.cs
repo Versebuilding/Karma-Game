@@ -26,7 +26,7 @@ public class NPCSpeechBubble : MonoBehaviour
     // ─── Settings ────────────────────────────────────────────────
     [Header("Positioning")]
     [Tooltip("World-space offset above the NPC")]
-    [SerializeField] private Vector3 worldOffset = new Vector3(0f, 5f, 0f);
+    [SerializeField] private Vector3 worldOffset = new Vector3(0f, 3.5f, 0f);
 
     [Tooltip("The NPC transform this bubble follows (auto-found if parent is NPC)")]
     [SerializeField] private Transform targetNPC;
@@ -60,6 +60,19 @@ public class NPCSpeechBubble : MonoBehaviour
 
     [Tooltip("Maximum characters to show (truncates with ...). Set high to avoid truncation.")]
     [SerializeField] private int maxDisplayChars = 500;
+
+    [Header("Text Sizing (world-space canvas units)")]
+    [Tooltip("Default font size for speech text")]
+    [Range(16f, 36f)]
+    [SerializeField] private float defaultFontSize = 28f;
+
+    [Tooltip("Minimum font size — text will never shrink below this")]
+    [Range(16f, 30f)]
+    [SerializeField] private float minFontSize = 24f;
+
+    [Tooltip("Maximum font size — text will never grow above this")]
+    [Range(20f, 36f)]
+    [SerializeField] private float maxFontSize = 28f;
 
     [Header("Typewriter Effect")]
     [Tooltip("Enable typewriter text reveal in the speech bubble")]
@@ -137,15 +150,26 @@ public class NPCSpeechBubble : MonoBehaviour
         if (canvasGroup == null)
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
-        // Auto-migrate: bump very low offsets to the recommended height
-        // so pre-existing scene instances render correctly without
-        // manual Inspector edits.
-        if (worldOffset.y <= 3f)
-            worldOffset = new Vector3(0f, 5f, 0f);
+        // Auto-migrate: bump only extremely low offsets (< 1) that would
+        // place the bubble inside the NPC's body. Don't touch reasonable values.
+        if (worldOffset.y < 1f)
+            worldOffset = new Vector3(0f, 3.5f, 0f);
+        // Clamp down old 5+ offsets that go off-screen during dialogue camera
+        if (worldOffset.y > 4.5f)
+            worldOffset.y = 3.5f;
 
         // Auto-migrate heightPadding: lower from old 0.5 to 0.2
         if (heightPadding >= 0.5f)
             heightPadding = 0.2f;
+
+        // Auto-migrate font sizes to font 28 world-space canvas units
+        // (older instances may have smaller values from previous migrations)
+        if (defaultFontSize < 20f)
+            defaultFontSize = 28f;
+        if (minFontSize < 20f)
+            minFontSize = 24f;
+        if (maxFontSize < 20f)
+            maxFontSize = 28f;
 
         // Dynamic height: calculate from NPC's renderer bounds so the bubble
         // truly clears the character's head regardless of model height.
@@ -176,11 +200,12 @@ public class NPCSpeechBubble : MonoBehaviour
 
         // Always enforce world-space scale (even if Inspector references are pre-assigned
         // and BuildBubbleUI() is skipped — without this the canvas renders at full screen)
+        // Canvas 600×400 at 0.007 scale: wider text area for font 28, smaller overall bubble
         var canvasRect = GetComponent<RectTransform>();
         if (canvasRect != null)
         {
-            canvasRect.sizeDelta = new Vector2(300, 400);
-            canvasRect.localScale = Vector3.one * 0.01f;
+            canvasRect.sizeDelta = new Vector2(600, 400);
+            canvasRect.localScale = Vector3.one * 0.007f;
             canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above the offset point
         }
 
@@ -256,6 +281,44 @@ public class NPCSpeechBubble : MonoBehaviour
         if (mainCamera != null)
         {
             transform.forward = mainCamera.transform.forward;
+
+            // Screen-space clamp: prevent the bubble from going off the top of the screen.
+            // The canvas pivot is at bottom-center, so the bubble extends UPWARD from its position.
+            ClampBubbleToScreen();
+        }
+    }
+
+    /// <summary>
+    /// Clamp the speech bubble so its top edge stays within the visible screen area.
+    /// Moves the bubble down in world space if it would go off the top of the viewport.
+    /// </summary>
+    private void ClampBubbleToScreen()
+    {
+        if (mainCamera == null) return;
+
+        var canvasRect = GetComponent<RectTransform>();
+        if (canvasRect == null) return;
+
+        // Estimate the top of the bubble in world space
+        // The canvas pivot is bottom-center (0.5, 0) so the bubble extends upward
+        float bubbleWorldHeight = canvasRect.sizeDelta.y * canvasRect.localScale.y;
+        Vector3 bubbleTop = transform.position + Vector3.up * bubbleWorldHeight;
+
+        // Convert to viewport coordinates (0-1 range, where 1 = top of screen)
+        Vector3 topViewport = mainCamera.WorldToViewportPoint(bubbleTop);
+
+        // Only clamp if the bubble is in front of the camera and going off-screen
+        float topMargin = 0.95f; // leave a small margin from the edge
+        if (topViewport.z > 0f && topViewport.y > topMargin)
+        {
+            // Find the world-space position where the top should be (at the margin)
+            Vector3 targetTop = mainCamera.ViewportToWorldPoint(
+                new Vector3(topViewport.x, topMargin, topViewport.z));
+            Vector3 currentTop = mainCamera.ViewportToWorldPoint(
+                new Vector3(topViewport.x, topViewport.y, topViewport.z));
+
+            // Slide the entire bubble down by the difference
+            transform.position += (targetTop - currentTop);
         }
     }
 
@@ -289,10 +352,13 @@ public class NPCSpeechBubble : MonoBehaviour
             if (speakerNameText != null)
                 speakerNameText.text = node.speakerName ?? "";
 
-            // Prepare speech text (truncated for bubble)
+            // Prepare speech text (truncated only as safety net)
             string text = node.dialogueText ?? "";
             if (text.Length > maxDisplayChars)
                 text = text.Substring(0, maxDisplayChars) + "...";
+
+            // Configure text sizing — sets full text, enables auto-sizing if needed
+            AdaptTextToFit(text);
 
             // Hide continue prompt during typewriter — shown when text completes
             if (continuePromptTMP != null)
@@ -305,10 +371,7 @@ public class NPCSpeechBubble : MonoBehaviour
             }
             else
             {
-                if (speechText != null)
-                    speechText.text = text;
-
-                // Show continue prompt immediately for instant text
+                // Full text already set by AdaptTextToFit — just show prompt
                 if (continuePromptTMP != null)
                     continuePromptTMP.gameObject.SetActive(true);
             }
@@ -417,7 +480,7 @@ public class NPCSpeechBubble : MonoBehaviour
         {
             if (text.Length > maxDisplayChars)
                 text = text.Substring(0, maxDisplayChars) + "...";
-            speechText.text = text;
+            AdaptTextToFit(text);
         }
     }
 
@@ -425,12 +488,12 @@ public class NPCSpeechBubble : MonoBehaviour
 
     private void BuildBubbleUI()
     {
-        // Set canvas size
+        // Set canvas size — 600×400 at 0.007 scale (wider for font 28, smaller overall)
         var canvasRect = GetComponent<RectTransform>();
         if (canvasRect != null)
         {
-            canvasRect.sizeDelta = new Vector2(300, 400);
-            canvasRect.localScale = Vector3.one * 0.01f; // world space scale
+            canvasRect.sizeDelta = new Vector2(600, 400);
+            canvasRect.localScale = Vector3.one * 0.007f; // world space scale
             canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above offset
         }
 
@@ -449,8 +512,8 @@ public class NPCSpeechBubble : MonoBehaviour
 
         // Vertical layout
         var vlg = bubblePanel.AddComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(10, 10, 8, 8);
-        vlg.spacing = 4;
+        vlg.padding = new RectOffset(15, 15, 12, 12);
+        vlg.spacing = 6;
         vlg.childAlignment = TextAnchor.UpperLeft;
         vlg.childControlWidth = true;
         vlg.childControlHeight = true;
@@ -469,7 +532,7 @@ public class NPCSpeechBubble : MonoBehaviour
         badgeImage.color = badgeColor;
 
         var badgeHLG = badgeObj.AddComponent<HorizontalLayoutGroup>();
-        badgeHLG.padding = new RectOffset(8, 8, 2, 2);
+        badgeHLG.padding = new RectOffset(12, 12, 3, 3);
         badgeHLG.childAlignment = TextAnchor.MiddleCenter;
 
         var badgeFitter = badgeObj.AddComponent<ContentSizeFitter>();
@@ -477,7 +540,7 @@ public class NPCSpeechBubble : MonoBehaviour
         badgeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         var badgeLE = badgeObj.AddComponent<LayoutElement>();
-        badgeLE.preferredHeight = 22;
+        badgeLE.preferredHeight = 30;
 
         // Speaker name text
         var nameObj = new GameObject("SpeakerName");
@@ -485,7 +548,7 @@ public class NPCSpeechBubble : MonoBehaviour
 
         speakerNameText = nameObj.AddComponent<TextMeshProUGUI>();
         speakerNameText.text = "NPC";
-        speakerNameText.fontSize = 14;
+        speakerNameText.fontSize = 18;
         speakerNameText.fontStyle = FontStyles.Bold;
         speakerNameText.color = Color.white;
         speakerNameText.alignment = TextAlignmentOptions.Center;
@@ -497,14 +560,17 @@ public class NPCSpeechBubble : MonoBehaviour
 
         speechText = textObj.AddComponent<TextMeshProUGUI>();
         speechText.text = "";
-        speechText.fontSize = 12;
+        speechText.fontSize = defaultFontSize;
         speechText.color = textColor;
         speechText.alignment = TextAlignmentOptions.TopLeft;
         speechText.textWrappingMode = TextWrappingModes.Normal;
-        speechText.enableAutoSizing = false;
+        speechText.overflowMode = TextOverflowModes.Overflow; // Never truncate/ellipsis
+        speechText.enableAutoSizing = true;
+        speechText.fontSizeMin = minFontSize;
+        speechText.fontSizeMax = maxFontSize;
 
         var textLE = textObj.AddComponent<LayoutElement>();
-        textLE.preferredWidth = 250;
+        textLE.preferredWidth = 540;
 
         // Continue Prompt (below speech text, right-aligned)
         if (showContinuePrompt)
@@ -514,16 +580,47 @@ public class NPCSpeechBubble : MonoBehaviour
 
             continuePromptTMP = promptObj.AddComponent<TextMeshProUGUI>();
             continuePromptTMP.text = continuePromptText;
-            continuePromptTMP.fontSize = 10;
+            continuePromptTMP.fontSize = 14;
             continuePromptTMP.fontStyle = FontStyles.Italic;
             continuePromptTMP.color = continuePromptColor;
             continuePromptTMP.alignment = TextAlignmentOptions.BottomRight;
             continuePromptTMP.enableAutoSizing = false;
 
             var promptLE = promptObj.AddComponent<LayoutElement>();
-            promptLE.preferredWidth = 250;
-            promptLE.preferredHeight = 16;
+            promptLE.preferredWidth = 540;
+            promptLE.preferredHeight = 22;
         }
+    }
+
+    // ─── Adaptive Text Sizing ────────────────────────────────────
+
+    /// <summary>
+    /// Configure speech text sizing for the given content. Sets the full text
+    /// with auto-sizing between minFontSize and maxFontSize. The bubble
+    /// background (ContentSizeFitter) grows vertically to fit all content —
+    /// no height cap, no text masking.
+    /// </summary>
+    private void AdaptTextToFit(string fullText)
+    {
+        if (speechText == null) return;
+
+        // Always use auto-sizing so TMP picks the best size in range
+        speechText.enableAutoSizing = true;
+        speechText.fontSizeMin = minFontSize;
+        speechText.fontSizeMax = maxFontSize;
+
+        // Prevent TMP from truncating or showing "..." — content grows the bubble instead
+        speechText.overflowMode = TextOverflowModes.Overflow;
+
+        speechText.text = fullText;
+        speechText.maxVisibleCharacters = int.MaxValue;
+
+        // Remove any height cap — let ContentSizeFitter grow the bubble to fit
+        var textLE = speechText.GetComponent<LayoutElement>();
+        if (textLE != null)
+            textLE.preferredHeight = -1;
+
+        speechText.ForceMeshUpdate();
     }
 
     // ─── Typewriter Effect ─────────────────────────────────────
@@ -547,8 +644,9 @@ public class NPCSpeechBubble : MonoBehaviour
 
         isTypewriting = false;
 
+        // Reveal all characters (text was already set by AdaptTextToFit)
         if (speechText != null)
-            speechText.text = fullBubbleText;
+            speechText.maxVisibleCharacters = int.MaxValue;
 
         // Show continue prompt now that full text is visible
         if (continuePromptTMP != null)
@@ -561,6 +659,7 @@ public class NPCSpeechBubble : MonoBehaviour
             StopCoroutine(typewriterCoroutine);
 
         fullBubbleText = text;
+        // Text is already set by AdaptTextToFit — typewriter just reveals characters
         typewriterCoroutine = StartCoroutine(TypewriterCoroutine(text));
     }
 
@@ -568,15 +667,18 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         isTypewriting = true;
 
+        // Full text already set by AdaptTextToFit — hide all characters initially
+        // Using maxVisibleCharacters keeps the bubble at its final size from the start
+        // (no jank from growing during reveal) and preserves auto-sizing calculations.
         if (speechText != null)
-            speechText.text = "";
+            speechText.maxVisibleCharacters = 0;
 
         float delay = 1f / typewriterSpeed;
 
         for (int i = 0; i <= text.Length; i++)
         {
             if (speechText != null)
-                speechText.text = text.Substring(0, i);
+                speechText.maxVisibleCharacters = i;
 
             yield return new WaitForSeconds(delay);
         }

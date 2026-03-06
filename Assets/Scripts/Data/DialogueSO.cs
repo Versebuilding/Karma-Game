@@ -119,6 +119,9 @@ public class DialogueChoice
     [Tooltip("Visual style of the choice button")]
     public ChoiceStyle choiceStyle = ChoiceStyle.Neutral;
 
+    [Tooltip("Voice clip to play when the player's choice text starts appearing in the dialogue panel (optional)")]
+    public AudioClip voiceClip;
+
     // ─── Extensibility (Conditions & Actions) ─────────────────
 
     [Space(8)]
