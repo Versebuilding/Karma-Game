@@ -38,6 +38,9 @@ public class GhostNPC : MonoBehaviour
     [Tooltip("Movement speed while roaming")]
     [Range(0.5f, 8f)] [SerializeField] private float roamSpeed = 2f;
 
+    [Tooltip("Random speed variation per ghost instance (e.g. 0.3 = ±30%)")]
+    [Range(0f, 0.5f)] [SerializeField] private float speedVariance = 0.25f;
+
     [Tooltip("Minimum seconds to idle at each waypoint")]
     [Range(0f, 10f)] [SerializeField] private float idleDurationMin = 2f;
 
@@ -157,6 +160,13 @@ public class GhostNPC : MonoBehaviour
     private int hashGreet;
     private int hashScream;
 
+    // Audio tracking
+    private Coroutine ambientFadeCoroutine;
+
+    // Outline highlight — cached like InteractableBase pattern
+    private QuickOutline cachedOutline;
+    private bool outlineLookedUp;
+
     // ═══════════════════════════════════════════════════════════════
     //  PUBLIC API
     // ═══════════════════════════════════════════════════════════════
@@ -165,19 +175,59 @@ public class GhostNPC : MonoBehaviour
     public GhostState CurrentState => currentState;
 
     /// <summary>
-    /// Called by the player interaction system when the player greets this ghost.
-    /// Triggers the greet reaction after the reaction delay.
+    /// Trigger the greet reaction. Only works when ghost is Paused (player in range).
+    /// Called by interaction system, dialogue events, or cutscene scripts.
+    /// Greet/scream clips do NOT play automatically — they require this explicit trigger.
     /// </summary>
     public void PlayerGreeted()
     {
-        if (currentState != GhostState.Paused) return;
+        if (currentState != GhostState.Paused && currentState != GhostState.Roaming) return;
+
+        // If roaming and player is in range, pause first
+        if (currentState == GhostState.Roaming && playerInRange)
+            TransitionTo(GhostState.Paused);
+
         playerGreeted = true;
         StartCoroutine(DoReactionAfterDelay(true));
     }
 
     /// <summary>
-    /// Hook for future karma system. Provide a function that returns the current karma score.
-    /// The ghost will use this to modify its reaction behavior.
+    /// Trigger the scream reaction. Only works when ghost is Paused or Roaming (player in range).
+    /// Called by interaction triggers, dialogue events, or cutscene scripts.
+    /// </summary>
+    public void TriggerScream()
+    {
+        if (currentState != GhostState.Paused && currentState != GhostState.Roaming) return;
+
+        // If roaming and player is in range, pause first
+        if (currentState == GhostState.Roaming && playerInRange)
+            TransitionTo(GhostState.Paused);
+
+        StartCoroutine(DoReactionAfterDelay(false));
+    }
+
+    /// <summary>
+    /// Trigger a reaction based on current karma level.
+    /// High karma (>= 0.5) → greet. Low karma (&lt; 0.5) → scream.
+    /// Called by external trigger zones, dialogue actions, or interaction system.
+    /// </summary>
+    public void TriggerKarmaReaction()
+    {
+        if (currentState != GhostState.Paused && currentState != GhostState.Roaming) return;
+
+        if (currentState == GhostState.Roaming && playerInRange)
+            TransitionTo(GhostState.Paused);
+
+        float karma = karmaEvaluator != null ? karmaEvaluator() : 0.5f;
+        if (karma >= 0.5f && canGreet)
+            StartCoroutine(DoReactionAfterDelay(true));
+        else if (karma < 0.5f && canScream)
+            StartCoroutine(DoReactionAfterDelay(false));
+    }
+
+    /// <summary>
+    /// Hook for karma system. Provide a function that returns the current karma score (0-1).
+    /// Used by TriggerKarmaReaction() to decide greet vs scream.
     /// </summary>
     public void SetKarmaEvaluator(Func<float> evaluator)
     {
@@ -245,9 +295,12 @@ public class GhostNPC : MonoBehaviour
             }
         }
 
+        // Randomize speed per instance so ghosts don't all move identically
+        float instanceSpeed = roamSpeed * UnityEngine.Random.Range(1f - speedVariance, 1f + speedVariance);
+
         // Configure NavMeshAgent defaults
-        agent.speed = roamSpeed;
-        agent.angularSpeed = 120f;
+        agent.speed = instanceSpeed;
+        agent.angularSpeed = UnityEngine.Random.Range(90f, 150f); // Vary turn speed too
         agent.stoppingDistance = waypointReachedDist;
         agent.autoBraking = true;
         agent.updateRotation = false; // we rotate manually for smoothness
@@ -258,6 +311,17 @@ public class GhostNPC : MonoBehaviour
         audioSource.loop = false;
         audioSource.spatialBlend = 1f; // 3D audio
         audioSource.volume = 0f;
+
+        // Pre-find outline on child mesh and ensure it starts disabled
+        cachedOutline = GetComponentInChildren<QuickOutline>(true);
+        outlineLookedUp = true;
+        if (cachedOutline != null)
+            cachedOutline.enabled = false;
+
+        // Warn if ambient clip is missing — helps identify prefabs that won't play audio
+        if (ambientClip == null)
+            Debug.LogWarning($"GhostNPC '{gameObject.name}': No ambientClip assigned! " +
+                "Drag an audio clip into the Ambient Clip field in Inspector.");
 
         spawnPosition = transform.position;
     }
@@ -276,7 +340,12 @@ public class GhostNPC : MonoBehaviour
         // Snap to NavMesh if not already on it
         SnapToNavMesh();
 
-        // Start roaming
+        // Randomize initial state so prefab instances don't move in sync:
+        // 1. Stagger first move with a random idle delay
+        idleTimer = UnityEngine.Random.Range(0f, idleDurationMax);
+        // 2. Random initial facing direction
+        transform.rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+        // 3. Pick first destination (each ghost gets a different random point)
         PickRandomDestination();
     }
 
@@ -377,28 +446,39 @@ public class GhostNPC : MonoBehaviour
         bool wasInRange = playerInRange;
         playerInRange = dist <= detectionRadius;
 
-        // Player just entered range
-        if (playerInRange && !wasInRange && currentState == GhostState.Roaming
-            && reactionCooldownTimer <= 0f)
+        // ── Player just entered range ──
+        // Audio + outline ALWAYS fire (regardless of cooldown/state) so every ghost
+        // responds when the player walks near it.
+        if (playerInRange && !wasInRange)
         {
-            TransitionTo(GhostState.Paused);
-            OnPlayerApproached?.Invoke();
+            // Start looping ambient audio
+            StartAmbientAudio();
 
-            // Start ambient audio
-            if (ambientClip != null)
-                StartCoroutine(FadeAudioIn(ambientClip));
+            // Enable outline highlight (like NPC targeting)
+            SetOutlineVisible(true);
 
-            // After reaction delay, if player hasn't greeted, do default reaction
-            StartCoroutine(WaitForPlayerInteraction());
+            // Transition to Paused only if Roaming and cooldown has elapsed
+            if (currentState == GhostState.Roaming && reactionCooldownTimer <= 0f)
+            {
+                TransitionTo(GhostState.Paused);
+                OnPlayerApproached?.Invoke();
+            }
+
+            // NOTE: Greet/scream clips do NOT auto-play.
+            // Use PlayerGreeted(), TriggerScream(), or TriggerKarmaReaction()
+            // from interaction triggers, dialogue actions, or cutscene scripts.
         }
 
-        // Player just left range
+        // ── Player just left range ──
         if (!playerInRange && wasInRange)
         {
+            // Always stop audio + outline when player leaves
+            StopAmbientAudio();
+            SetOutlineVisible(false);
+
             if (currentState == GhostState.Paused || currentState == GhostState.Reacting)
             {
                 OnPlayerLeft?.Invoke();
-                StartCoroutine(FadeAudioOut());
                 TransitionTo(GhostState.Roaming);
                 reactionCooldownTimer = reactionCooldown;
             }
@@ -409,48 +489,12 @@ public class GhostNPC : MonoBehaviour
     //  REACTION SYSTEM
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Wait for the reaction delay, then trigger default reaction if player hasn't greeted.
-    /// </summary>
-    private IEnumerator WaitForPlayerInteraction()
-    {
-        playerGreeted = false;
-        yield return new WaitForSeconds(reactionDelay);
-
-        // If still paused and player didn't greet, do default reaction
-        if (currentState == GhostState.Paused && !playerGreeted)
-        {
-            bool doGreet = false;
-            bool doScream = false;
-
-            switch (defaultReaction)
-            {
-                case DefaultReaction.Greet:
-                    doGreet = canGreet;
-                    break;
-                case DefaultReaction.Scream:
-                    doScream = canScream;
-                    break;
-                case DefaultReaction.Nothing:
-                    // Check karma if evaluator is set
-                    if (karmaEvaluator != null)
-                    {
-                        float karma = karmaEvaluator();
-                        if (karma >= 0.5f && canGreet)
-                            doGreet = true;
-                        else if (karma < 0.5f && canScream)
-                            doScream = true;
-                    }
-                    break;
-            }
-
-            if (doGreet)
-                StartCoroutine(DoReactionAfterDelay(true));
-            else if (doScream)
-                StartCoroutine(DoReactionAfterDelay(false));
-            // else: do nothing, just stay paused until player leaves
-        }
-    }
+    // NOTE: Auto-reaction removed. Greet/scream clips require explicit triggers:
+    //   PlayerGreeted()       — greet reaction
+    //   TriggerScream()       — scream reaction
+    //   TriggerKarmaReaction() — karma-based (>= 0.5 greet, < 0.5 scream)
+    //
+    // Wire these to: trigger zones, dialogue actions, interaction system, or cutscene scripts.
 
     /// <summary>
     /// Play the greet or scream reaction.
@@ -636,21 +680,47 @@ public class GhostNPC : MonoBehaviour
         }
     }
 
-    private IEnumerator FadeAudioIn(AudioClip clip)
+    /// <summary>Start looping ambient audio with fade-in.</summary>
+    private void StartAmbientAudio()
+    {
+        if (ambientClip == null || audioSource == null) return;
+
+        if (ambientFadeCoroutine != null)
+            StopCoroutine(ambientFadeCoroutine);
+        ambientFadeCoroutine = StartCoroutine(FadeAudioInLoop(ambientClip));
+    }
+
+    /// <summary>Fade out and stop any playing audio.</summary>
+    private void StopAmbientAudio()
+    {
+        if (ambientFadeCoroutine != null)
+            StopCoroutine(ambientFadeCoroutine);
+        ambientFadeCoroutine = null;
+        StartCoroutine(FadeAudioOut());
+    }
+
+    /// <summary>
+    /// Fade in an audio clip and loop it continuously while the player is in range.
+    /// Stops when StopAmbientAudio() / FadeAudioOut() is called.
+    /// </summary>
+    private IEnumerator FadeAudioInLoop(AudioClip clip)
     {
         if (audioSource == null) yield break;
 
         audioSource.clip = clip;
-        audioSource.loop = true;
+        audioSource.loop = true; // Loop while player is nearby
         audioSource.volume = 0f;
         audioSource.Play();
 
+        // Fade in
         while (audioSource.volume < maxVolume)
         {
             audioSource.volume = Mathf.MoveTowards(
                 audioSource.volume, maxVolume, audioFadeSpeed * Time.deltaTime);
             yield return null;
         }
+
+        ambientFadeCoroutine = null; // Fade-in done — audio continues looping via AudioSource.loop
     }
 
     private IEnumerator FadeAudioOut()
@@ -667,6 +737,27 @@ public class GhostNPC : MonoBehaviour
         audioSource.Stop();
         audioSource.loop = false;
         audioSource.volume = 0f;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  OUTLINE HIGHLIGHT
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Enable or disable the QuickOutline on the ghost's child mesh.
+    /// Mirrors the InteractableBase targeting pattern — ghost glows when player is near.
+    /// </summary>
+    private void SetOutlineVisible(bool visible)
+    {
+        // Lazy lookup fallback (if Awake didn't find it, e.g. outline added at runtime)
+        if (!outlineLookedUp)
+        {
+            cachedOutline = GetComponentInChildren<QuickOutline>(true);
+            outlineLookedUp = true;
+        }
+
+        if (cachedOutline != null)
+            cachedOutline.enabled = visible;
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -117,6 +117,7 @@ public class DialogueNPC : InteractableBase
     private Coroutine defaultAnimCoroutine;
     private float dialogueEndTime;
     private bool isPlayingNodeAnimation; // true when per-node override is active
+    private bool hasTalkingBoolParam;    // cached: does Animator have talkingBoolParam?
 
     /// <summary>
     /// Grace period (seconds) after dialogue ends before re-interaction is allowed.
@@ -153,6 +154,20 @@ public class DialogueNPC : InteractableBase
 
         if (voiceSource == null)
             voiceSource = GetComponent<AudioSource>();
+
+        // Cache whether the Animator has the talking bool parameter
+        // (prevents "Parameter does not exist" errors at runtime)
+        if (animator != null && !string.IsNullOrEmpty(talkingBoolParam))
+        {
+            foreach (var param in animator.parameters)
+            {
+                if (param.name == talkingBoolParam && param.type == AnimatorControllerParameterType.Bool)
+                {
+                    hasTalkingBoolParam = true;
+                    break;
+                }
+            }
+        }
     }
 
     void Start()
@@ -413,7 +428,7 @@ public class DialogueNPC : InteractableBase
             // Use the anim cycler (handles variant cycling for idles/talks)
             animCycler.SetTalking(true);
         }
-        else if (animator != null)
+        else if (animator != null && hasTalkingBoolParam)
         {
             // Fallback: just set a bool on the animator directly
             animator.SetBool(talkingBoolParam, true);
@@ -434,7 +449,7 @@ public class DialogueNPC : InteractableBase
             animCycler.enabled = true;
             animCycler.SetTalking(false);
         }
-        else if (animator != null)
+        else if (animator != null && hasTalkingBoolParam)
         {
             animator.SetBool(talkingBoolParam, false);
         }

@@ -15,6 +15,15 @@ public class ClimbState : PlayerState
     private ClimbSurface surface;
     private float startY;
 
+    /// <summary>Minimum distance (units) the player must climb before vault-over check activates.</summary>
+    private const float MinClimbBeforeVault = 0.5f;
+
+    /// <summary>How far up from current position to check for the ledge top (fraction of standHeight).</summary>
+    private const float LedgeCheckHeightFraction = 0.6f;
+
+    /// <summary>Max raycast distance toward the wall for surface/ledge checks.</summary>
+    private const float SurfaceRayDistance = 2.5f;
+
     public ClimbState(PlayerController player) : base(player) { }
 
     public override void Enter()
@@ -113,10 +122,22 @@ public class ClimbState : PlayerState
 
     // ─── Surface Checks ──────────────────────────────────────────
 
+    /// <summary>
+    /// Check if the player has climbed past the top of the wall.
+    /// Only activates after the player has climbed at least MinClimbBeforeVault
+    /// to prevent false-positive vaults when starting at the base of a wall.
+    /// Uses a lower check height (60% of standHeight) and longer raycast.
+    /// </summary>
     private bool ReachedLedgeTop()
     {
-        Vector3 checkPos = player.transform.position + Vector3.up * player.standHeight;
-        return !Physics.Raycast(checkPos, -surface.SurfaceNormal, 1.5f);
+        // Don't check until the player has actually climbed a bit
+        float climbedSoFar = player.transform.position.y - startY;
+        if (climbedSoFar < MinClimbBeforeVault)
+            return false;
+
+        float checkHeight = player.standHeight * LedgeCheckHeightFraction;
+        Vector3 checkPos = player.transform.position + Vector3.up * checkHeight;
+        return !Physics.Raycast(checkPos, -surface.SurfaceNormal, SurfaceRayDistance);
     }
 
     /// <summary>
@@ -127,6 +148,6 @@ public class ClimbState : PlayerState
     {
         Vector3 rayOrigin = player.transform.position;
         Vector3 rayDir = -surface.SurfaceNormal;
-        return Physics.Raycast(rayOrigin, rayDir, 1.5f);
+        return Physics.Raycast(rayOrigin, rayDir, SurfaceRayDistance);
     }
 }

@@ -424,6 +424,7 @@ public class DialogueEditorWindow : EditorWindow
         EditorGUILayout.PropertyField(choiceProp.FindPropertyRelative("choiceText"), new GUIContent("Text"));
         EditorGUILayout.PropertyField(choiceProp.FindPropertyRelative("inputLabel"), new GUIContent("Input Key"));
         EditorGUILayout.PropertyField(choiceProp.FindPropertyRelative("choiceStyle"), new GUIContent("Style"));
+        EditorGUILayout.PropertyField(choiceProp.FindPropertyRelative("voiceClip"), new GUIContent("Voice Clip"));
         DrawNodeIdDropdown(choiceProp.FindPropertyRelative("nextNodeId"), "Next Node");
 
         // Legacy fields

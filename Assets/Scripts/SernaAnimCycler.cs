@@ -14,9 +14,32 @@ public class SernaAnimCycler : MonoBehaviour
     private int currentVariant;
     private float timer;
 
+    // Cached parameter existence flags (prevents "Parameter does not exist" errors)
+    private bool hasTalkingParam;
+    private bool hasVariantParam;
+
     void Awake()
     {
         if (!animator) animator = GetComponentInChildren<Animator>(true);
+
+        // Cache which parameters actually exist in the Animator Controller
+        if (animator != null)
+        {
+            foreach (var param in animator.parameters)
+            {
+                if (param.name == "isTalking" && param.type == AnimatorControllerParameterType.Bool)
+                    hasTalkingParam = true;
+                if (param.name == "Variant" && param.type == AnimatorControllerParameterType.Int)
+                    hasVariantParam = true;
+            }
+
+#if UNITY_EDITOR
+            if (!hasTalkingParam)
+                Debug.LogWarning($"SernaAnimCycler: Animator on '{gameObject.name}' is missing 'isTalking' (Bool) parameter.");
+            if (!hasVariantParam)
+                Debug.LogWarning($"SernaAnimCycler: Animator on '{gameObject.name}' is missing 'Variant' (Int) parameter.");
+#endif
+        }
     }
 
     void Start()
@@ -44,7 +67,7 @@ public class SernaAnimCycler : MonoBehaviour
     {
         isTalking = talking;
         timer = 0f; // restart cycling when mode changes
-        if (animator) animator.SetBool("isTalking", isTalking);
+        if (animator && hasTalkingParam) animator.SetBool("isTalking", isTalking);
         // optional: reset variant when switching mode
         SetVariant(0);
     }
@@ -58,6 +81,6 @@ public class SernaAnimCycler : MonoBehaviour
     private void SetVariant(int v)
     {
         currentVariant = Mathf.Clamp(v, 0, variantCount - 1);
-        if (animator) animator.SetInteger("Variant", currentVariant);
+        if (animator && hasVariantParam) animator.SetInteger("Variant", currentVariant);
     }
 }

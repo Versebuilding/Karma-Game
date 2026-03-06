@@ -45,10 +45,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4a3487c504d14bc4a016a3d5a51b2de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldOffset: {x: 0, y: 3, z: 0}
+  worldOffset: {x: 0, y: 2, z: 0}
   targetNPC: {fileID: 756973734862533560}
   autoCalculateHeight: 1
-  heightPadding: 0.2
+  heightPadding: 0.1
   bubblePanel: {fileID: 2538891181577521114}
   speakerNameText: {fileID: 1873678686137820057}
   speechText: {fileID: 4786154178154525569}
@@ -56,6 +56,9 @@ MonoBehaviour:
   badgeColor: {r: 0.4, g: 0.28, b: 0.16, a: 1}
   textColor: {r: 1, g: 1, b: 1, a: 1}
   maxDisplayChars: 80
+  defaultFontSize: 36
+  minFontSize: 24
+  maxFontSize: 28
   useTypewriter: 1
   typewriterSpeed: 35
   animateFade: 1
@@ -97,8 +100,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 29}
-  m_SizeDelta: {x: -46.6745, y: -170.2856}
+  m_AnchoredPosition: {x: -2.117096, y: -25.016}
+  m_SizeDelta: {x: -67.8458, y: -139}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4827383831940005111
 CanvasRenderer:
@@ -194,7 +197,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: -0.09313965, z: -1.4506836, w: -93.65446}
+  m_margin: {x: 0, y: -0.09313965, z: -1.4506836, w: -4.580887}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -234,8 +237,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -12}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 19.7568}
+  m_SizeDelta: {x: 0, y: -114.3246}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &197720185762940140
 CanvasRenderer:
@@ -860,7 +863,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -105, y: 94}
+  m_AnchoredPosition: {x: -246, y: 151.74}
   m_SizeDelta: {x: 182.3834, y: 94.5148}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2401369261064109950
