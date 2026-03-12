@@ -130,3 +130,77 @@ public class ModifyCounterAction : IDialogueAction
             VariableStore.Instance.ModifyCounter(counterName, amount);
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  QUEST ACTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Starts a quest from a dialogue choice or node.
+/// Example: Player agrees to help Serna → StartQuestAction fires.
+/// </summary>
+[Serializable]
+public class StartQuestAction : IDialogueAction
+{
+    [Tooltip("Quest ID to start (must match QuestSO.questId)")]
+    public string questId;
+
+    public string Label => string.IsNullOrEmpty(questId) ? "Start Quest: (none)" : $"Start Quest: {questId}";
+
+    public void Execute()
+    {
+        if (QuestManager.Instance != null && !string.IsNullOrEmpty(questId))
+            QuestManager.Instance.StartQuest(questId);
+    }
+}
+
+/// <summary>
+/// Advances a quest objective from a dialogue choice or node.
+/// Example: "Talk to Serna" objective completes when player reaches a specific dialogue node.
+/// </summary>
+[Serializable]
+public class AdvanceQuestAction : IDialogueAction
+{
+    [Tooltip("Quest ID containing the objective")]
+    public string questId;
+
+    [Tooltip("Objective ID to advance")]
+    public string objectiveId;
+
+    [Tooltip("Amount to advance (default 1)")]
+    public int amount = 1;
+
+    public string Label
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(questId)) return "Advance Quest: (none)";
+            return $"Quest {questId}: {objectiveId} +{amount}";
+        }
+    }
+
+    public void Execute()
+    {
+        if (QuestManager.Instance != null && !string.IsNullOrEmpty(questId) && !string.IsNullOrEmpty(objectiveId))
+            QuestManager.Instance.AdvanceObjective(questId, objectiveId, amount);
+    }
+}
+
+/// <summary>
+/// Force-completes a quest from a dialogue choice or node.
+/// Useful for quests that end through dialogue rather than objective tracking.
+/// </summary>
+[Serializable]
+public class CompleteQuestAction : IDialogueAction
+{
+    [Tooltip("Quest ID to complete")]
+    public string questId;
+
+    public string Label => string.IsNullOrEmpty(questId) ? "Complete Quest: (none)" : $"Complete Quest: {questId}";
+
+    public void Execute()
+    {
+        if (QuestManager.Instance != null && !string.IsNullOrEmpty(questId))
+            QuestManager.Instance.CompleteQuest(questId);
+    }
+}

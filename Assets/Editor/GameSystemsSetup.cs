@@ -182,6 +182,57 @@ public class GameSystemsSetup
             }
         }
 
+        // Add QuestManager
+        if (managers.GetComponent<QuestManager>() == null)
+        {
+            Undo.AddComponent<QuestManager>(managers);
+            Debug.Log("  + Added QuestManager");
+        }
+        else
+        {
+            Debug.Log("  QuestManager already attached");
+        }
+
+        // Add QuestLogUI
+        if (managers.GetComponent<QuestLogUI>() == null)
+        {
+            Undo.AddComponent<QuestLogUI>(managers);
+            Debug.Log("  + Added QuestLogUI");
+        }
+        else
+        {
+            Debug.Log("  QuestLogUI already attached");
+        }
+
+        // Auto-assign quest definitions if any exist
+        var questManager = managers.GetComponent<QuestManager>();
+        if (questManager != null)
+        {
+            var questGuids = AssetDatabase.FindAssets("t:QuestSO");
+            if (questGuids.Length > 0)
+            {
+                var quests = new QuestSO[questGuids.Length];
+                for (int i = 0; i < questGuids.Length; i++)
+                {
+                    quests[i] = AssetDatabase.LoadAssetAtPath<QuestSO>(
+                        AssetDatabase.GUIDToAssetPath(questGuids[i]));
+                }
+                var qmSo = new SerializedObject(questManager);
+                var questsProp = qmSo.FindProperty("questDefinitions");
+                questsProp.arraySize = quests.Length;
+                for (int i = 0; i < quests.Length; i++)
+                {
+                    questsProp.GetArrayElementAtIndex(i).objectReferenceValue = quests[i];
+                }
+                qmSo.ApplyModifiedProperties();
+                Debug.Log($"  Assigned {quests.Length} quest definition(s) to QuestManager");
+            }
+            else
+            {
+                Debug.Log("  No QuestSO assets found (create via Create > Karma > Quest)");
+            }
+        }
+
         // Try to assign KarmaConfig
         var karmaManager = managers.GetComponent<KarmaManager>();
         if (karmaManager != null)
