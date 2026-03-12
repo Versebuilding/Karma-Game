@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 ///   - Karma → starting value (from KarmaConfig)
 ///   - Coins → starting value (from WalletManager)
 ///   - VariableStore → all flags, counters, relationships cleared
+///   - Quests → all progress reset, re-initialized from definitions
 ///   - Active dialogue → ended
 ///   - Scene → reloaded (re-creates player, NPCs, world objects)
 ///
@@ -45,6 +46,13 @@ public class ResetGameButton : MonoBehaviour
         {
             VariableStore.Instance.ResetAll();
             Debug.Log("  VariableStore → cleared");
+        }
+
+        // Reset all quest progress
+        if (QuestManager.Instance != null)
+        {
+            QuestManager.Instance.ResetAllQuests();
+            Debug.Log("  Quests → reset");
         }
 
         // Clear one-time reward tracking (re-enables all dialogue rewards)
