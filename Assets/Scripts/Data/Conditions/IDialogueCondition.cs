@@ -172,3 +172,90 @@ public class CounterCondition : IDialogueCondition
         };
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  QUEST CONDITIONS
+// ═══════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Checks a quest's current state.
+/// Example: "Only show this dialogue node if quest 'help_serna' is Active"
+/// </summary>
+[Serializable]
+public class QuestStateCondition : IDialogueCondition
+{
+    [Tooltip("Quest ID to check")]
+    public string questId;
+
+    [Tooltip("Required quest state")]
+    public QuestState requiredState = QuestState.Active;
+
+    public string Label
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(questId)) return "Quest: (none)";
+            return $"Quest {questId} is {requiredState}";
+        }
+    }
+
+    public bool Evaluate()
+    {
+        if (QuestManager.Instance == null) return true;
+        return QuestManager.Instance.GetQuestState(questId) == requiredState;
+    }
+}
+
+/// <summary>
+/// Checks a quest objective's progress against a threshold.
+/// Example: "Only show this choice if player has collected >= 2 food items for quest 'help_serna'"
+/// </summary>
+[Serializable]
+public class QuestObjectiveCondition : IDialogueCondition
+{
+    [Tooltip("Quest ID containing the objective")]
+    public string questId;
+
+    [Tooltip("Objective ID to check")]
+    public string objectiveId;
+
+    [Tooltip("Comparison operator")]
+    public ComparisonOp comparison = ComparisonOp.AtLeast;
+
+    [Tooltip("Value to compare progress against")]
+    public int value = 1;
+
+    public string Label
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(questId) || string.IsNullOrEmpty(objectiveId))
+                return "Quest Objective: (none)";
+            string op = comparison switch
+            {
+                ComparisonOp.AtLeast => ">=",
+                ComparisonOp.GreaterThan => ">",
+                ComparisonOp.Equals => "==",
+                ComparisonOp.LessThan => "<",
+                ComparisonOp.AtMost => "<=",
+                _ => "?"
+            };
+            return $"{questId}.{objectiveId} {op} {value}";
+        }
+    }
+
+    public bool Evaluate()
+    {
+        if (QuestManager.Instance == null) return true;
+        var (current, _) = QuestManager.Instance.GetObjectiveProgress(questId, objectiveId);
+        return comparison switch
+        {
+            ComparisonOp.AtLeast => current >= value,
+            ComparisonOp.GreaterThan => current > value,
+            ComparisonOp.Equals => current == value,
+            ComparisonOp.LessThan => current < value,
+            ComparisonOp.AtMost => current <= value,
+            _ => true
+        };
+    }
+}
