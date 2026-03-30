@@ -55,6 +55,13 @@ public class ResetGameButton : MonoBehaviour
             Debug.Log("  Quests → reset");
         }
 
+        // Clear inventory
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.ClearItems();
+            Debug.Log("  Inventory → cleared");
+        }
+
         // Clear one-time reward tracking (re-enables all dialogue rewards)
         if (DialogueManager.Instance != null)
         {
