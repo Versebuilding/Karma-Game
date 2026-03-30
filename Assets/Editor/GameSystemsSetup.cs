@@ -204,6 +204,17 @@ public class GameSystemsSetup
             Debug.Log("  QuestLogUI already attached");
         }
 
+        // Add InventoryManager
+        if (managers.GetComponent<InventoryManager>() == null)
+        {
+            Undo.AddComponent<InventoryManager>(managers);
+            Debug.Log("  + Added InventoryManager");
+        }
+        else
+        {
+            Debug.Log("  InventoryManager already attached");
+        }
+
         // Auto-assign quest definitions if any exist
         var questManager = managers.GetComponent<QuestManager>();
         if (questManager != null)
