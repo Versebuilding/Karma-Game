@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09cd80c4d2a934caaa713366e3f084c8, type: 3}
+  m_Name: NPCDialogue
+  m_EditorClassIdentifier: 
+  dialoguelines:
+  - Can you help me?
+  - I will help you!
+  - Thanks!
+  - I won't help you!
+  - LEAVE!
+  - I don't know!
+  - I guess so...
+  typingSpeed: 0.05
+  npcName: John
+  playerName: James
+  choices:
+  - dialogueIndex: 0
+    choices:
+    - Goodbye!
+    - See ya!
+    - Don't know
+    nextDialogueIndexes: 010000000300000005000000
+    skipTriggerIndexes: 
+    skipto: 
+    karmapositive: 01000000
+    karmanegative: 03000000
+    karmaneutral: 05000000
+  enddialoguelines: 00000100010001
+  isNpclines: 01000100010001
