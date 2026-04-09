@@ -1,41 +1,22 @@
-# ===============================
-# Unity generated folders
-# ===============================
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
-[Mm]emoryCaptures/
-UserSettings/
-
-# ===============================
-# Unity meta files (KEEP THESE)
-# ===============================
-!/[Aa]ssets/**/*.meta
-
-# ===============================
-# IDEs
-# ===============================
-.vs/
-.idea/
-
-# ===============================
-# OS files
-# ===============================
-.DS_Store
-**/.DS_Store
-Thumbs.db
-
-# ===============================
-# Blender backup files
-# ===============================
-*.blend[1-9]
-*.blend[1-9].meta
+MemoryCaptures/
+*.csproj
+*.unityproj
+*.sln
+*.suo
 *.tmp
-*.bak
-# Blender backups + their Unity meta files
-*.blend[1-9]
-*.blend[1-9].meta
-
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+.DS_Store
+Thumbs.db
