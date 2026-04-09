@@ -41,6 +41,10 @@ public class ThirdPersonCamera : MonoBehaviour
     [Range(-2f, 1f)]
     [SerializeField] private float dialogueVerticalOffset = 0.2f;
 
+    [Tooltip("How far down from the NPC's top to look (0 = top of head, 0.1 = eyes/face)")]
+    [Range(0f, 0.5f)]
+    [SerializeField] private float lookAtHeadRatio = 0.1f;
+
     [Tooltip("Transition speed into/out of dialogue camera")]
     [SerializeField] private float dialogueTransitionSpeed = 5f;
 
@@ -70,6 +74,7 @@ public class ThirdPersonCamera : MonoBehaviour
     private float normalFOV;
     private Volume dialogueVolume;
     private DepthOfField dofOverride;
+    private float npcLookAtHeight = 2.0f; // computed per-NPC from renderer bounds
 
     // ─── Unity Lifecycle ──────────────────────────────────────
 
@@ -194,6 +199,30 @@ public class ThirdPersonCamera : MonoBehaviour
         npcTarget = DialogueManager.Instance != null
             ? DialogueManager.Instance.ActiveNPCTransform
             : null;
+
+        // Auto-detect NPC height from renderer bounds
+        if (npcTarget != null)
+        {
+            npcLookAtHeight = ComputeNPCLookAtHeight(npcTarget);
+        }
+    }
+
+    /// <summary>
+    /// Computes the world-space Y offset to look at (face level) by reading
+    /// the NPC's combined renderer bounds. Works for any character height.
+    /// </summary>
+    private float ComputeNPCLookAtHeight(Transform npc)
+    {
+        var renderers = npc.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return 2.0f; // fallback
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+            bounds.Encapsulate(renderers[i].bounds);
+
+        // Top of the model relative to NPC root, then come down by lookAtHeadRatio
+        float totalHeight = bounds.max.y - npc.position.y;
+        return totalHeight * (1f - lookAtHeadRatio);
     }
 
     private void HandleDialogueEnded()
@@ -275,10 +304,18 @@ public class ThirdPersonCamera : MonoBehaviour
         // Moving the rig to the right shifts the camera right so it can see
         // around the player's body to the NPC.
         Vector3 right = Vector3.Cross(Vector3.up, dirToNPC).normalized;
+
+        // Camera height targets the midpoint between player head and NPC look-at point
+        // so both characters are naturally in frame regardless of height difference
+        float playerHeight = player.GetComponentInChildren<Renderer>() != null
+            ? player.GetComponentInChildren<Renderer>().bounds.max.y - player.position.y
+            : 2f;
+        float cameraY = (playerHeight * 0.85f + npcLookAtHeight) * 0.5f + dialogueVerticalOffset;
+
         Vector3 targetPos = player.position
             + right * shoulderOffset
             + dirToNPC * dialogueForwardOffset
-            + Vector3.up * dialogueVerticalOffset;
+            + Vector3.up * cameraY;
 
         float t = dialogueTransitionSpeed * Time.deltaTime;
         transform.position = Vector3.Lerp(transform.position, targetPos, t);
@@ -286,7 +323,7 @@ public class ThirdPersonCamera : MonoBehaviour
         // ── Rotate rig to look AT the NPC (not just parallel to dirToNPC) ──
         // Using the rig's actual position → NPC direction ensures the NPC is
         // properly framed in the center regardless of shoulder offset amount.
-        Vector3 npcCenter = npcTarget.position + Vector3.up * 1.0f;
+        Vector3 npcCenter = npcTarget.position + Vector3.up * npcLookAtHeight;
         Vector3 lookDirection = npcCenter - transform.position;
         if (lookDirection.sqrMagnitude < 0.01f) lookDirection = dirToNPC;
         Quaternion targetRot = Quaternion.LookRotation(lookDirection);
@@ -311,7 +348,7 @@ public class ThirdPersonCamera : MonoBehaviour
             // Dynamic focus distance — keep NPC body in sharp focus
             if (dofOverride != null && childCamera != null)
             {
-                Vector3 npcFocusPoint = npcTarget.position + Vector3.up * 1.5f;
+                Vector3 npcFocusPoint = npcTarget.position + Vector3.up * npcLookAtHeight;
                 float focusDist = Vector3.Distance(
                     childCamera.transform.position, npcFocusPoint);
                 dofOverride.focusDistance.Override(focusDist);
