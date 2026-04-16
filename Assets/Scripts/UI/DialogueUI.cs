@@ -749,10 +749,12 @@ public class DialogueUI : MonoBehaviour
         var bubble = GetActiveBubble();
         if (bubble != null && bubble.IsTypewriting)
         {
+            Debug.Log("DialogueUI.OnAdvance(): Bubble still typewriting — skipping typewriter instead.");
             bubble.SkipTypewriter();
             return;
         }
 
+        Debug.Log($"DialogueUI.OnAdvance(): Advancing dialogue. Bubble={(bubble != null ? "found" : "NULL")}, currentNode={DialogueManager.Instance.CurrentNode?.nodeId}");
         DialogueManager.Instance.AdvanceDialogue();
     }
 

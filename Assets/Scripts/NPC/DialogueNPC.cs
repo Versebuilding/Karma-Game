@@ -244,6 +244,7 @@ public class DialogueNPC : InteractableBase
             float dist = Vector3.Distance(playerTransform.position, transform.position);
             if (dist > maxDialogueDistance)
             {
+                Debug.LogWarning($"DialogueNPC: Player too far ({dist:F1} > {maxDialogueDistance:F1}). Ending dialogue with {gameObject.name}.");
                 ForceEndDialogue();
             }
         }
