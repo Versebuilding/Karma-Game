@@ -124,6 +124,12 @@ public class DialogueUI : MonoBehaviour
     private readonly KeyCode advanceKey2 = KeyCode.Space;
     private readonly KeyCode advanceKey3 = KeyCode.Return;
 
+    // ─── Input Grace Period ──────────────────────────────────
+    // Prevents the E key that started the interaction from immediately
+    // advancing dialogue in the same/next frame.
+    private float inputGraceUntil;
+    private const float INPUT_GRACE_SECONDS = 0.3f;
+
     // ─── Unity Lifecycle ──────────────────────────────────────
 
     private bool isSubscribed;
@@ -239,6 +245,9 @@ public class DialogueUI : MonoBehaviour
         // Don't process input while showing selection highlight
         if (isWaitingAfterSelection) return;
 
+        // Grace period after dialogue start — ignore the E key that triggered interaction
+        if (Time.time < inputGraceUntil) return;
+
         // Player's choice text is showing — wait for Enter/E to confirm, then advance to NPC response
         if (isShowingPlayerChoice)
         {
@@ -337,6 +346,11 @@ public class DialogueUI : MonoBehaviour
         // Panel activation is deferred to HandleNodeChanged to avoid a flash
         // of empty panel before content arrives. HandleNodeChanged fires
         // immediately after this event in the same frame.
+
+        // Grace period: ignore advance input briefly so the E key that
+        // triggered the interaction doesn't immediately advance the first node
+        inputGraceUntil = Time.time + INPUT_GRACE_SECONDS;
+
         Debug.Log($"DialogueUI: Dialogue started for '{dialogue?.dialogueId}'.");
     }
 
