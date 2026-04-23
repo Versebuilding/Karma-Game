@@ -32,6 +32,12 @@ public class QuestTriggerZone : MonoBehaviour
     [Tooltip("If true, only the quest must be Active to trigger")]
     [SerializeField] private bool requireQuestActive = true;
 
+    /// <summary>Quest ID this waypoint belongs to (for compass binding, etc.).</summary>
+    public string QuestId => questId;
+
+    /// <summary>Objective ID this waypoint advances (for compass binding, etc.).</summary>
+    public string ObjectiveId => objectiveId;
+
     private bool hasTriggered;
 
     void OnTriggerEnter(Collider other)
