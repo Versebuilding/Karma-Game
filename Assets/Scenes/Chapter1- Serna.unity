@@ -3815,15 +3815,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6700802084733952360, guid: 0abd436d83cfc42c69d60cd90ff9ce19, type: 3}
       propertyPath: fixedScreenPosition.x
-      value: 328
+      value: -300
       objectReference: {fileID: 0}
     - target: {fileID: 6700802084733952360, guid: 0abd436d83cfc42c69d60cd90ff9ce19, type: 3}
       propertyPath: fixedScreenPosition.y
-      value: 178
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 6700802084733952360, guid: 0abd436d83cfc42c69d60cd90ff9ce19, type: 3}
       propertyPath: fixedScreenPosition.z
-      value: 82
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8494019241153577477, guid: 0abd436d83cfc42c69d60cd90ff9ce19, type: 3}
       propertyPath: m_LocalPosition.x

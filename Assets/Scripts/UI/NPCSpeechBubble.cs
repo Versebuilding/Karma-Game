@@ -208,12 +208,27 @@ public class NPCSpeechBubble : MonoBehaviour
         if (continuePromptText == "Press E \u25B6" || continuePromptText == "Press Enter \u25B6")
             continuePromptText = "Press Enter >>";
 
-        // Enforce canvas size/pivot up front (scale set later, proportional to NPC)
         var canvasRect = GetComponent<RectTransform>();
         if (canvasRect != null)
         {
-            canvasRect.sizeDelta = new Vector2(600, 400);
-            canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above the offset point
+            if (!useFixedScreenPosition)
+            {
+                // World Space mode: fixed canvas rect with bottom-center pivot so the
+                // bubble sits above the NPC offset point.
+                canvasRect.sizeDelta = new Vector2(600, 400);
+                canvasRect.pivot = new Vector2(0.5f, 0f);
+            }
+            else
+            {
+                // Screen Space Overlay mode: canvas must fill screen with center pivot.
+                // Changing pivot/sizeDelta here shifts the coordinate system and
+                // makes BubblePanel land at the wrong position.
+                canvasRect.anchorMin = Vector2.zero;
+                canvasRect.anchorMax = Vector2.one;
+                canvasRect.offsetMin = Vector2.zero;
+                canvasRect.offsetMax = Vector2.zero;
+                canvasRect.pivot = new Vector2(0.5f, 0.5f);
+            }
         }
 
         // Build UI if not already set up
@@ -321,9 +336,28 @@ public class NPCSpeechBubble : MonoBehaviour
 
         if (useFixedScreenPosition)
         {
-            // Canvas is non-root (nested inside the scene canvas hierarchy).
-            // localPosition directly sets its visual position within the parent canvas space.
-            transform.localPosition = fixedScreenPosition;
+            // Root SS Overlay canvas: position is driven by BubblePanel.anchoredPosition.
+            // Convert NPC world position → screen pixels → canvas-local coords → anchoredPosition.
+            if (bubblePanel != null && mainCamera != null)
+            {
+                Vector3 npcScreen = mainCamera.WorldToScreenPoint(targetNPC.position);
+                if (npcScreen.z > 0f)
+                {
+                    // fixedScreenPosition: screen-pixel offset from NPC (x neg=left, y pos=up)
+                    Vector2 targetScreen = new Vector2(
+                        npcScreen.x + fixedScreenPosition.x,
+                        npcScreen.y + fixedScreenPosition.y);
+
+                    var canvasRect = worldCanvas.GetComponent<RectTransform>();
+                    Vector2 localPos;
+                    if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                            canvasRect, targetScreen, null, out localPos))
+                    {
+                        var rt = bubblePanel.GetComponent<RectTransform>();
+                        if (rt != null) rt.anchoredPosition = localPos;
+                    }
+                }
+            }
             return;
         }
 
