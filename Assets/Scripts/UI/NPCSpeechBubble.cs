@@ -23,6 +23,20 @@ using TMPro;
 /// </summary>
 public class NPCSpeechBubble : MonoBehaviour
 {
+    // ─── Static Registry ────────────────────────────────────────
+    // Bubbles register themselves here so DialogueUI can find them
+    // after they're unparented from the NPC hierarchy.
+    private static readonly System.Collections.Generic.Dictionary<Transform, NPCSpeechBubble>
+        registry = new System.Collections.Generic.Dictionary<Transform, NPCSpeechBubble>();
+
+    /// <summary>Find the speech bubble associated with a given NPC transform.</summary>
+    public static NPCSpeechBubble GetBubbleForNPC(Transform npc)
+    {
+        if (npc != null && registry.TryGetValue(npc, out var bubble))
+            return bubble;
+        return null;
+    }
+
     // ─── Settings ────────────────────────────────────────────────
     [Header("Positioning")]
     [Tooltip("World-space offset above the NPC")]
@@ -37,6 +51,17 @@ public class NPCSpeechBubble : MonoBehaviour
     [Tooltip("Extra clearance above the NPC's highest point (world units)")]
     [Range(0f, 5f)]
     [SerializeField] private float heightPadding = 0.2f;
+
+    [Tooltip("Extra world-unit clearance past the NPC's edge when the bubble is placed to the side during dialogue")]
+    [Range(0f, 5f)]
+    [SerializeField] private float dialogueSidePadding = 1.5f;
+
+    [Header("Fixed Screen Position (Screen Space canvas only)")]
+    [Tooltip("When true, positions the bubble in screen space relative to the NPC using the offset below. Canvas stays as Screen Space Overlay — no world-space math.")]
+    [SerializeField] private bool useFixedScreenPosition = false;
+
+    [Tooltip("Screen-pixel offset from the NPC's screen position. X negative = left, X positive = right, Y positive = up. Z is ignored. Tune in Play Mode and it takes effect immediately.")]
+    [SerializeField] private Vector3 fixedScreenPosition = new Vector3(-300f, 200f, 0f);
 
     [Header("References (auto-created if empty)")]
     [Tooltip("The bubble panel root")]
@@ -110,6 +135,10 @@ public class NPCSpeechBubble : MonoBehaviour
     private bool isSubscribed;
     private bool isTypewriting;
     private string fullBubbleText;
+    private Vector3 _dialogueOffset;
+    private bool _dialogueModeActive;
+    private float _npcBoundsHalfWidth;
+    private float _npcMidHeight;
     private TMP_Text continuePromptTMP;
 
     // ─── Unity Lifecycle ────────────────────────────────────────
@@ -118,7 +147,7 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         mainCamera = Camera.main;
 
-        // Auto-find target NPC from parent
+        // Auto-find target NPC from parent BEFORE unparenting
         if (targetNPC == null)
         {
             var npc = GetComponentInParent<NPCBase>();
@@ -128,35 +157,39 @@ public class NPCSpeechBubble : MonoBehaviour
                 targetNPC = transform.parent;
         }
 
-        // Ensure we have a World Space Canvas
+        // Register so DialogueUI can find us by NPC transform
+        if (targetNPC != null)
+            registry[targetNPC] = this;
+
         worldCanvas = GetComponent<Canvas>();
         if (worldCanvas == null)
-        {
             worldCanvas = gameObject.AddComponent<Canvas>();
-            worldCanvas.renderMode = RenderMode.WorldSpace;
-        }
-        worldCanvas.renderMode = RenderMode.WorldSpace;
 
-        // Canvas scaler for world space
-        var scaler = GetComponent<CanvasScaler>();
-        if (scaler == null)
+        if (!useFixedScreenPosition)
         {
-            scaler = gameObject.AddComponent<CanvasScaler>();
-            scaler.dynamicPixelsPerUnit = 10f;
+            // Dynamic World Space mode: unparent so parent rotation/scale can't interfere,
+            // then switch canvas to World Space for 3D billboard positioning.
+            transform.SetParent(null, false);
+            worldCanvas.renderMode = RenderMode.WorldSpace;
+
+            var scaler = GetComponent<CanvasScaler>();
+            if (scaler == null)
+            {
+                scaler = gameObject.AddComponent<CanvasScaler>();
+                scaler.dynamicPixelsPerUnit = 10f;
+            }
         }
+        // useFixedScreenPosition=true: canvas stays as Screen Space Overlay child of its parent.
+        // Position is driven by BubblePanel.anchoredPosition in LateUpdate — no unparenting needed.
 
         // Canvas group for fading
         canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup == null)
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
-        // Auto-migrate: bump only extremely low offsets (< 1) that would
-        // place the bubble inside the NPC's body. Don't touch reasonable values.
-        if (worldOffset.y < 1f)
-            worldOffset = new Vector3(0f, 3.5f, 0f);
-        // Clamp down old 5+ offsets that go off-screen during dialogue camera
-        if (worldOffset.y > 4.5f)
-            worldOffset.y = 3.5f;
+        // Force a reasonable offset — 3.5 units above NPC origin
+        // (auto-calculation below will override based on NPC size)
+        worldOffset = new Vector3(0f, 3.5f, 0f);
 
         // Auto-migrate heightPadding: lower from old 0.5 to 0.2
         if (heightPadding >= 0.5f)
@@ -171,8 +204,25 @@ public class NPCSpeechBubble : MonoBehaviour
         if (maxFontSize < 20f)
             maxFontSize = 28f;
 
-        // Dynamic height: calculate from NPC's renderer bounds so the bubble
-        // truly clears the character's head regardless of model height.
+        // Auto-migrate prompt text for pre-existing scene instances
+        if (continuePromptText == "Press E \u25B6" || continuePromptText == "Press Enter \u25B6")
+            continuePromptText = "Press Enter >>";
+
+        // Enforce canvas size/pivot up front (scale set later, proportional to NPC)
+        var canvasRect = GetComponent<RectTransform>();
+        if (canvasRect != null)
+        {
+            canvasRect.sizeDelta = new Vector2(600, 400);
+            canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above the offset point
+        }
+
+        // Build UI if not already set up
+        if (bubblePanel == null)
+            BuildBubbleUI();
+
+        // Dynamic height + scale: calculate from NPC's renderer bounds so the
+        // bubble truly clears the character's head AND is proportional to model size.
+        // Works for tiny 2-unit characters and giant 15-unit models alike.
         if (autoCalculateHeight && targetNPC != null)
         {
             var renderers = targetNPC.GetComponentsInChildren<Renderer>();
@@ -184,34 +234,29 @@ public class NPCSpeechBubble : MonoBehaviour
 
                 float npcTop = combined.max.y - targetNPC.position.y;
                 float suggestedY = npcTop + heightPadding;
+                worldOffset.y = suggestedY;
+                _npcBoundsHalfWidth = combined.extents.x;
+                _npcMidHeight = npcTop * 0.6f;
 
-                if (worldOffset.y < suggestedY)
-                {
-                    worldOffset.y = suggestedY;
-                    Debug.Log($"NPCSpeechBubble: Auto-adjusted offset to y={suggestedY:F1} " +
-                        $"(NPC top from {renderers.Length} renderers={npcTop:F1}, padding={heightPadding:F1})");
-                }
+                // Scale the bubble canvas proportionally to NPC size.
+                // Baseline: a 2-unit NPC uses scale 0.007.
+                const float BASELINE_NPC_HEIGHT = 2f;
+                const float BASELINE_SCALE = 0.007f;
+                float scaleMultiplier = Mathf.Max(1f, npcTop / BASELINE_NPC_HEIGHT);
+                float finalScale = BASELINE_SCALE * scaleMultiplier;
+                // Don't resize a Screen Space Overlay canvas — it fills the screen at its own scale.
+                if (canvasRect != null && !useFixedScreenPosition)
+                    canvasRect.localScale = Vector3.one * finalScale;
+
+                Debug.Log($"NPCSpeechBubble: Offset y={suggestedY:F1}, scale={finalScale:F3} " +
+                    $"(NPC top from {renderers.Length} renderers={npcTop:F1}, padding={heightPadding:F1})");
             }
         }
-
-        // Auto-migrate prompt text for pre-existing scene instances
-        if (continuePromptText == "Press E \u25B6" || continuePromptText == "Press Enter \u25B6")
-            continuePromptText = "Press Enter >>";
-
-        // Always enforce world-space scale (even if Inspector references are pre-assigned
-        // and BuildBubbleUI() is skipped — without this the canvas renders at full screen)
-        // Canvas 600×400 at 0.007 scale: wider text area for font 28, smaller overall bubble
-        var canvasRect = GetComponent<RectTransform>();
-        if (canvasRect != null)
+        else if (canvasRect != null && !useFixedScreenPosition)
         {
-            canvasRect.sizeDelta = new Vector2(600, 400);
+            // No auto-sizing: fall back to a conservative scale (World Space only).
             canvasRect.localScale = Vector3.one * 0.007f;
-            canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above the offset point
         }
-
-        // Build UI if not already set up
-        if (bubblePanel == null)
-            BuildBubbleUI();
 
         // If bubble was pre-assigned, try to find continue prompt child
         if (bubblePanel != null && continuePromptTMP == null)
@@ -274,16 +319,40 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         if (!isShowing || targetNPC == null) return;
 
-        // Follow target NPC position
-        transform.position = targetNPC.position + worldOffset;
+        if (useFixedScreenPosition)
+        {
+            // Screen Space Overlay: move the BubblePanel within the canvas by converting
+            // the NPC's screen position + pixel offset into canvas-local coordinates.
+            if (bubblePanel != null && mainCamera != null)
+            {
+                Vector3 npcScreen = mainCamera.WorldToScreenPoint(targetNPC.position);
+                if (npcScreen.z > 0f) // NPC is visible in front of camera
+                {
+                    Vector2 targetScreen = new Vector2(
+                        npcScreen.x + fixedScreenPosition.x,
+                        npcScreen.y + fixedScreenPosition.y);
 
-        // Billboard: always face the camera
+                    var canvasRect = worldCanvas.GetComponent<RectTransform>();
+                    Camera evtCam = worldCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : mainCamera;
+                    Vector2 localPos;
+                    if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                            canvasRect, targetScreen, evtCam, out localPos))
+                    {
+                        var rt = bubblePanel.GetComponent<RectTransform>();
+                        if (rt != null) rt.anchoredPosition = localPos;
+                    }
+                }
+            }
+            return;
+        }
+
+        // World Space canvas: position relative to NPC
+        transform.position = targetNPC.position + (_dialogueModeActive ? _dialogueOffset : worldOffset);
+
+        // Billboard: face the camera
         if (mainCamera != null)
         {
             transform.forward = mainCamera.transform.forward;
-
-            // Screen-space clamp: prevent the bubble from going off the top of the screen.
-            // The canvas pivot is at bottom-center, so the bubble extends UPWARD from its position.
             ClampBubbleToScreen();
         }
     }
@@ -326,13 +395,31 @@ public class NPCSpeechBubble : MonoBehaviour
 
     private void HandleDialogueStarted(DialogueSO dialogue)
     {
-        // Don't auto-show here — HandleNodeChanged will decide based on speaker.
-        // Just verify this NPC is relevant to the dialogue.
         var dialogueNPC = targetNPC?.GetComponent<DialogueNPC>();
         if (dialogueNPC == null) return;
+        ComputeDialogueOffset();
+    }
 
-        // Mark that we're participating in this dialogue
-        // (HandleNodeChanged will show/hide based on who's speaking)
+    // Computes a fixed lateral offset so the bubble sits beside the NPC rather than
+    // above them, chosen once per dialogue (camera is fixed for the conversation).
+    private void ComputeDialogueOffset()
+    {
+        if (mainCamera == null || targetNPC == null) return;
+
+        // Pick the side with more screen space: if NPC is right of center → bubble goes left
+        Vector3 npcScreenPos = mainCamera.WorldToScreenPoint(targetNPC.position);
+        bool putLeft = npcScreenPos.x > Screen.width * 0.5f;
+
+        // Horizontal clearance: NPC's rendered half-width + tunable padding
+        Vector3 camRight = mainCamera.transform.right;
+        camRight.y = 0f;
+        if (camRight.sqrMagnitude > 0.001f) camRight.Normalize();
+        float clearance = _npcBoundsHalfWidth + dialogueSidePadding;
+
+        // Place at shoulder/chest height rather than above the head
+        _dialogueOffset = new Vector3(0f, _npcMidHeight, 0f)
+                        + camRight * clearance * (putLeft ? -1f : 1f);
+        _dialogueModeActive = true;
     }
 
     private void HandleNodeChanged(DialogueNode node)
@@ -341,6 +428,7 @@ public class NPCSpeechBubble : MonoBehaviour
 
         // Only show bubble when the NPC is speaking (speaker matches ActiveNPCSpeakerName)
         bool isNPCSpeaking = IsActiveNPCSpeaker(node.speakerName);
+        Debug.Log($"NPCSpeechBubble [{gameObject.name}]: NodeChanged speaker='{node.speakerName}' isNPCSpeaking={isNPCSpeaking} speechText={(speechText != null ? "OK" : "NULL")} bubblePanel={(bubblePanel != null ? "OK" : "NULL")} targetNPC={(targetNPC != null ? targetNPC.name : "NULL")}");
 
         if (isNPCSpeaking)
         {
@@ -398,14 +486,13 @@ public class NPCSpeechBubble : MonoBehaviour
 
     private void HandleDialogueEnded()
     {
-        // Stop any running typewriter
         if (typewriterCoroutine != null)
         {
             StopCoroutine(typewriterCoroutine);
             typewriterCoroutine = null;
         }
         isTypewriting = false;
-
+        _dialogueModeActive = false;
         Hide();
     }
 
