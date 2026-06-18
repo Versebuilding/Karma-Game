@@ -60,8 +60,8 @@ public class NPCSpeechBubble : MonoBehaviour
     [Tooltip("When true, positions the bubble in screen space relative to the NPC using the offset below. Canvas stays as Screen Space Overlay — no world-space math.")]
     [SerializeField] private bool useFixedScreenPosition = false;
 
-    [Tooltip("Screen-pixel offset from the NPC's screen position. X negative = left, X positive = right, Y positive = up. Z is ignored. Tune in Play Mode and it takes effect immediately.")]
-    [SerializeField] private Vector3 fixedScreenPosition = new Vector3(-300f, 200f, 0f);
+    [Tooltip("Local position of this Canvas within the parent canvas hierarchy. Set once to where the bubble looks correct in Play Mode — the script locks it there every frame.")]
+    [SerializeField] private Vector3 fixedScreenPosition = new Vector3(328f, 178f, 82f);
 
     [Header("References (auto-created if empty)")]
     [Tooltip("The bubble panel root")]
@@ -321,28 +321,9 @@ public class NPCSpeechBubble : MonoBehaviour
 
         if (useFixedScreenPosition)
         {
-            // Screen Space Overlay: move the BubblePanel within the canvas by converting
-            // the NPC's screen position + pixel offset into canvas-local coordinates.
-            if (bubblePanel != null && mainCamera != null)
-            {
-                Vector3 npcScreen = mainCamera.WorldToScreenPoint(targetNPC.position);
-                if (npcScreen.z > 0f) // NPC is visible in front of camera
-                {
-                    Vector2 targetScreen = new Vector2(
-                        npcScreen.x + fixedScreenPosition.x,
-                        npcScreen.y + fixedScreenPosition.y);
-
-                    var canvasRect = worldCanvas.GetComponent<RectTransform>();
-                    Camera evtCam = worldCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : mainCamera;
-                    Vector2 localPos;
-                    if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                            canvasRect, targetScreen, evtCam, out localPos))
-                    {
-                        var rt = bubblePanel.GetComponent<RectTransform>();
-                        if (rt != null) rt.anchoredPosition = localPos;
-                    }
-                }
-            }
+            // Canvas is non-root (nested inside the scene canvas hierarchy).
+            // localPosition directly sets its visual position within the parent canvas space.
+            transform.localPosition = fixedScreenPosition;
             return;
         }
 
