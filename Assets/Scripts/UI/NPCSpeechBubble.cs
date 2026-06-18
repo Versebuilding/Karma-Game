@@ -147,14 +147,22 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         mainCamera = Camera.main;
 
-        // Auto-find target NPC from parent BEFORE unparenting
-        if (targetNPC == null)
+        // Always auto-find NPC from parent hierarchy FIRST — the serialized reference
+        // is unreliable (can point to the wrong object after scene setup changes).
+        // SpeechBubble is always a child of the NPC, so GetComponentInParent<DialogueNPC>()
+        // is the authoritative way to find the correct NPC before we unparent.
+        var parentDialogueNPC = GetComponentInParent<DialogueNPC>();
+        if (parentDialogueNPC != null)
         {
-            var npc = GetComponentInParent<NPCBase>();
-            if (npc != null)
-                targetNPC = npc.transform;
-            else
-                targetNPC = transform.parent;
+            targetNPC = parentDialogueNPC.transform;
+        }
+        else
+        {
+            var parentNPCBase = GetComponentInParent<NPCBase>();
+            if (parentNPCBase != null)
+                targetNPC = parentNPCBase.transform;
+            else if (targetNPC == null)
+                targetNPC = transform.parent?.parent; // Canvas → SpeechBubble → NPC root
         }
 
         // Register so DialogueUI can find us by NPC transform
