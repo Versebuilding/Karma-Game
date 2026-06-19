@@ -467,6 +467,19 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         if (node == null) return;
 
+        // Screen-space bubble: re-sync targetNPC every node so we never track the wrong character.
+        // HandleDialogueStarted may have missed the override if DialogueManager wasn't ready yet.
+        if (useFixedScreenPosition && DialogueManager.Instance != null)
+        {
+            var activeNPC = DialogueManager.Instance.ActiveNPCTransform;
+            if (activeNPC != null && activeNPC != targetNPC)
+            {
+                targetNPC = activeNPC;
+                registry[targetNPC] = this;
+            }
+            s_screenSpaceBubbleActive = true;
+        }
+
         // Only show bubble when the NPC is speaking (speaker matches ActiveNPCSpeakerName)
         bool isNPCSpeaking = IsActiveNPCSpeaker(node.speakerName);
         Debug.Log($"NPCSpeechBubble [{gameObject.name}]: NodeChanged speaker='{node.speakerName}' isNPCSpeaking={isNPCSpeaking} speechText={(speechText != null ? "OK" : "NULL")} bubblePanel={(bubblePanel != null ? "OK" : "NULL")} targetNPC={(targetNPC != null ? targetNPC.name : "NULL")}");
