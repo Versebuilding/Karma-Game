@@ -422,19 +422,8 @@ public class NPCSpeechBubble : MonoBehaviour
 
     private void HandleDialogueStarted(DialogueSO dialogue)
     {
-        // Screen-space mode: override targetNPC to whoever is actually speaking.
-        // This bubble may live anywhere in the scene hierarchy (e.g. parented to
-        // the player), so we must not rely on GetComponentInParent for it.
-        if (useFixedScreenPosition && DialogueManager.Instance != null)
-        {
-            var activeNPC = DialogueManager.Instance.ActiveNPCTransform;
-            if (activeNPC != null)
-            {
-                targetNPC = activeNPC;
-                registry[targetNPC] = this;
-            }
+        if (useFixedScreenPosition)
             s_screenSpaceBubbleActive = true;
-        }
 
         var dialogueNPC = targetNPC?.GetComponent<DialogueNPC>();
         if (dialogueNPC == null) return;
@@ -466,19 +455,6 @@ public class NPCSpeechBubble : MonoBehaviour
     private void HandleNodeChanged(DialogueNode node)
     {
         if (node == null) return;
-
-        // Screen-space bubble: re-sync targetNPC every node so we never track the wrong character.
-        // HandleDialogueStarted may have missed the override if DialogueManager wasn't ready yet.
-        if (useFixedScreenPosition && DialogueManager.Instance != null)
-        {
-            var activeNPC = DialogueManager.Instance.ActiveNPCTransform;
-            if (activeNPC != null && activeNPC != targetNPC)
-            {
-                targetNPC = activeNPC;
-                registry[targetNPC] = this;
-            }
-            s_screenSpaceBubbleActive = true;
-        }
 
         // Only show bubble when the NPC is speaking (speaker matches ActiveNPCSpeakerName)
         bool isNPCSpeaking = IsActiveNPCSpeaker(node.speakerName);
