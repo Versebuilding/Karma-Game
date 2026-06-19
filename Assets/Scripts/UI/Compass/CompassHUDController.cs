@@ -66,6 +66,18 @@ namespace Karma.UI.Compass
         [Tooltip("Update tick frequency in Hz. 20-30 is a good mobile range.")]
         [SerializeField] private float updateHz = 25f;
 
+        [Tooltip("Active quest waypoint always shows regardless of distance.")]
+        [SerializeField] private bool primaryQuestAlwaysVisible = true;
+
+        [Tooltip("If false, markers outside the FOV are hidden (no edge-arrow). If true, they clamp to the bar edges.")]
+        [SerializeField] private bool showEdgeArrows = false;
+
+        [Tooltip("Angular window around the compass center in which a marker is considered 'centered' and gets an outline.")]
+        [SerializeField] private float centerHighlightDegrees = 10f;
+
+        [Tooltip("Non-primary markers (NPC, Altar, etc.) within this angular distance of the active PrimaryQuest waypoint are hidden so the yellow '!' doesn't visually overlap them.")]
+        [SerializeField] private float primaryOverlapDegrees = 6f;
+
         // ─── Camera Source ──────────────────────────────────────────
 
         [Header("Camera")]
@@ -82,6 +94,7 @@ namespace Karma.UI.Compass
         private readonly Dictionary<CompassMarkerType, (Sprite sprite, Color tint)> _lookup
             = new Dictionary<CompassMarkerType, (Sprite, Color)>();
         private readonly List<CompassMarker> _sorted = new List<CompassMarker>(64);
+        private readonly List<float> _primaryAngles = new List<float>(4);
         private WaitForSeconds _wait;
         private Coroutine _tickRoutine;
 
@@ -167,6 +180,21 @@ namespace Karma.UI.Compass
             // Lower priority first so higher priority draws on top (later = top in UGUI sibling order).
             _sorted.Sort(CompareByPriority);
 
+            // Pre-pass: record angular positions of active PrimaryQuest markers so we can
+            // hide non-primary markers that would visually overlap them on the bar.
+            _primaryAngles.Clear();
+            for (int i = 0; i < _sorted.Count; i++)
+            {
+                var m = _sorted[i];
+                if (m.type != CompassMarkerType.PrimaryQuest) continue;
+                var mt = m.cachedTransform != null ? m.cachedTransform : m.transform;
+                Vector3 toP = mt.position - camPos;
+                toP.y = 0f;
+                if (toP.x * toP.x + toP.z * toP.z < 0.0001f) continue;
+                float yawP = Mathf.Atan2(toP.x, toP.z) * Mathf.Rad2Deg;
+                _primaryAngles.Add(Mathf.DeltaAngle(camYaw, yawP));
+            }
+
             int count = _sorted.Count;
             for (int i = 0; i < count; i++)
             {
@@ -177,17 +205,39 @@ namespace Karma.UI.Compass
                 to.y = 0f;
                 float sqr = to.x * to.x + to.z * to.z;
 
+                bool isPrimary = m.type == CompassMarkerType.PrimaryQuest;
+                bool ignoreRange = isPrimary && primaryQuestAlwaysVisible;
+
                 float maxRange = m.maxRangeOverride > 0f ? m.maxRangeOverride : defaultMaxRange;
                 float maxSqr = maxRange * maxRange;
-                if (sqr > maxSqr) continue;
+                if (!ignoreRange && sqr > maxSqr) continue;
                 if (m.minRangeToShow > 0f && sqr < m.minRangeToShow * m.minRangeToShow) continue;
 
                 float dist = Mathf.Sqrt(sqr);
-                float alpha = fadeBand > 0f ? Mathf.Clamp01((maxRange - dist) / fadeBand) : 1f;
+                float alpha = (ignoreRange || fadeBand <= 0f)
+                    ? 1f
+                    : Mathf.Clamp01((maxRange - dist) / fadeBand);
 
                 float markerYaw = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
                 float delta = Mathf.DeltaAngle(camYaw, markerYaw);
                 bool offFov = Mathf.Abs(delta) > _halfFov;
+
+                if (offFov && !showEdgeArrows) continue;
+
+                // Hide non-primary markers that sit right on top of an active quest waypoint.
+                if (!isPrimary && primaryOverlapDegrees > 0f && _primaryAngles.Count > 0)
+                {
+                    bool hiddenByPrimary = false;
+                    for (int p = 0; p < _primaryAngles.Count; p++)
+                    {
+                        if (Mathf.Abs(Mathf.DeltaAngle(delta, _primaryAngles[p])) < primaryOverlapDegrees)
+                        {
+                            hiddenByPrimary = true;
+                            break;
+                        }
+                    }
+                    if (hiddenByPrimary) continue;
+                }
 
                 float t = Mathf.Clamp(delta / _halfFov, -1f, 1f);
                 float x = t * _halfBarWidth;
@@ -198,9 +248,12 @@ namespace Karma.UI.Compass
                 ResolveIcon(m, offFov, delta, out icon, out tint);
                 tint.a = 1f; // CanvasGroup drives alpha to keep sprite color separate
 
+                bool highlighted = Mathf.Abs(delta) <= centerHighlightDegrees * 0.5f;
+
                 var slot = _pool.Acquire();
                 if (slot == null) break;
-                slot.Apply(new Vector2(x, y), icon, tint, alpha);
+                bool flip = offFov && delta < 0f;
+                slot.Apply(new Vector2(x, y), icon, tint, alpha, flip, highlighted);
                 slot.rect.SetAsLastSibling();
             }
 
@@ -228,6 +281,23 @@ namespace Karma.UI.Compass
         {
             if (offFov)
             {
+                // Quest waypoints keep their actual icon (!) at the edge so the player
+                // knows WHERE to go, not just that something is off-screen.
+                if (m.type == CompassMarkerType.PrimaryQuest)
+                {
+                    if (m.overrideSprite != null)
+                    {
+                        icon = m.overrideSprite;
+                        tint = m.overrideTint.a > 0f ? m.overrideTint : Color.white;
+                        return;
+                    }
+                    if (_lookup.TryGetValue(m.type, out var questEntry))
+                    {
+                        icon = questEntry.sprite;
+                        tint = m.overrideTint.a > 0f ? m.overrideTint : questEntry.tint;
+                        return;
+                    }
+                }
                 icon = delta > 0f ? edgeArrowRight : edgeArrowLeft;
                 tint = m.overrideTint.a > 0f ? m.overrideTint : Color.white;
                 return;

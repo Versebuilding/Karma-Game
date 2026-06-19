@@ -29,6 +29,10 @@ public class NPCSpeechBubble : MonoBehaviour
     private static readonly System.Collections.Generic.Dictionary<Transform, NPCSpeechBubble>
         registry = new System.Collections.Generic.Dictionary<Transform, NPCSpeechBubble>();
 
+    // True while a screen-space (useFixedScreenPosition) bubble is active.
+    // WorldSpace bubbles check this to avoid double-showing during the same dialogue.
+    private static bool s_screenSpaceBubbleActive = false;
+
     /// <summary>Find the speech bubble associated with a given NPC transform.</summary>
     public static NPCSpeechBubble GetBubbleForNPC(Transform npc)
     {
@@ -418,6 +422,20 @@ public class NPCSpeechBubble : MonoBehaviour
 
     private void HandleDialogueStarted(DialogueSO dialogue)
     {
+        // Screen-space mode: override targetNPC to whoever is actually speaking.
+        // This bubble may live anywhere in the scene hierarchy (e.g. parented to
+        // the player), so we must not rely on GetComponentInParent for it.
+        if (useFixedScreenPosition && DialogueManager.Instance != null)
+        {
+            var activeNPC = DialogueManager.Instance.ActiveNPCTransform;
+            if (activeNPC != null)
+            {
+                targetNPC = activeNPC;
+                registry[targetNPC] = this;
+            }
+            s_screenSpaceBubbleActive = true;
+        }
+
         var dialogueNPC = targetNPC?.GetComponent<DialogueNPC>();
         if (dialogueNPC == null) return;
         ComputeDialogueOffset();
@@ -501,6 +519,17 @@ public class NPCSpeechBubble : MonoBehaviour
     private bool IsActiveNPCSpeaker(string speakerName)
     {
         if (DialogueManager.Instance == null) return false;
+
+        // WorldSpace bubbles yield to the screen-space bubble when one is active —
+        // otherwise both render simultaneously over the same NPC.
+        if (!useFixedScreenPosition && s_screenSpaceBubbleActive)
+            return false;
+
+        // Only show if this bubble's NPC is the one actually in dialogue.
+        var activeNPCTransform = DialogueManager.Instance.ActiveNPCTransform;
+        if (activeNPCTransform != null && targetNPC != null && activeNPCTransform != targetNPC)
+            return false;
+
         string npcName = DialogueManager.Instance.ActiveNPCSpeakerName;
         if (string.IsNullOrEmpty(npcName) || string.IsNullOrEmpty(speakerName))
             return false;
@@ -516,6 +545,8 @@ public class NPCSpeechBubble : MonoBehaviour
         }
         isTypewriting = false;
         _dialogueModeActive = false;
+        if (useFixedScreenPosition)
+            s_screenSpaceBubbleActive = false;
         Hide();
     }
 
