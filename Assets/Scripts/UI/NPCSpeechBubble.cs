@@ -378,7 +378,17 @@ public class NPCSpeechBubble : MonoBehaviour
                             canvasRect, targetScreen, null, out localPos))
                     {
                         var rt = bubblePanel.GetComponent<RectTransform>();
-                        if (rt != null) rt.anchoredPosition = localPos;
+                        if (rt != null)
+                        {
+                            // Clamp so bubble stays fully on screen.
+                            float halfW = rt.sizeDelta.x * 0.5f;
+                            float halfH = rt.sizeDelta.y * 0.5f;
+                            float halfSW = Screen.width * 0.5f;
+                            float halfSH = Screen.height * 0.5f;
+                            localPos.x = Mathf.Clamp(localPos.x, -halfSW + halfW, halfSW - halfW);
+                            localPos.y = Mathf.Clamp(localPos.y, -halfSH + halfH, halfSH - halfH);
+                            rt.anchoredPosition = localPos;
+                        }
                     }
                 }
             }
@@ -746,10 +756,13 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         if (speechText == null) return;
 
-        // Always use auto-sizing so TMP picks the best size in range
+        // Always use auto-sizing so TMP picks the best size in range.
+        // SSO canvas units = screen pixels (Constant Pixel Size, scale=1); use smaller
+        // sizes that look right on screen. WorldSpace uses the serialized values sized
+        // for the tiny canvas scale (~0.026–0.039).
         speechText.enableAutoSizing = true;
-        speechText.fontSizeMin = minFontSize;
-        speechText.fontSizeMax = maxFontSize;
+        speechText.fontSizeMin = useFixedScreenPosition ? 12f : minFontSize;
+        speechText.fontSizeMax = useFixedScreenPosition ? 18f : maxFontSize;
 
         // SSO mode: text is bounded within BubblePanel — use Ellipsis to prevent spill.
         // World-space mode: Overflow lets ContentSizeFitter grow the bubble to fit.

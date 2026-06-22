@@ -229,11 +229,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6700802084733952360, guid: 0abd436d83cfc42c69d60cd90ff9ce19, type: 3}
       propertyPath: fixedScreenPosition.x
-      value: -300
+      value: -120
       objectReference: {fileID: 0}
     - target: {fileID: 6700802084733952360, guid: 0abd436d83cfc42c69d60cd90ff9ce19, type: 3}
       propertyPath: fixedScreenPosition.y
-      value: 200
+      value: 110
       objectReference: {fileID: 0}
     - target: {fileID: 6700802084733952360, guid: 0abd436d83cfc42c69d60cd90ff9ce19, type: 3}
       propertyPath: fixedScreenPosition.z
