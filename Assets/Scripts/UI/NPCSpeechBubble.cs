@@ -177,11 +177,13 @@ public class NPCSpeechBubble : MonoBehaviour
         if (worldCanvas == null)
             worldCanvas = gameObject.AddComponent<Canvas>();
 
+        // Always unparent: WorldSpace needs it for billboard positioning;
+        // Screen Space Overlay needs it so the canvas is a root-level SSO (parenting under
+        // a 3D object causes Unity to force WorldSpace mode, producing a huge 3D panel).
+        transform.SetParent(null, false);
+
         if (!useFixedScreenPosition)
         {
-            // Dynamic World Space mode: unparent so parent rotation/scale can't interfere,
-            // then switch canvas to World Space for 3D billboard positioning.
-            transform.SetParent(null, false);
             worldCanvas.renderMode = RenderMode.WorldSpace;
 
             var scaler = GetComponent<CanvasScaler>();
@@ -191,8 +193,8 @@ public class NPCSpeechBubble : MonoBehaviour
                 scaler.dynamicPixelsPerUnit = 10f;
             }
         }
-        // useFixedScreenPosition=true: canvas stays as Screen Space Overlay child of its parent.
-        // Position is driven by BubblePanel.anchoredPosition in LateUpdate — no unparenting needed.
+        // useFixedScreenPosition=true: canvas is now root-level SSO. Position driven by
+        // BubblePanel.anchoredPosition in LateUpdate via WorldToScreenPoint.
 
         // Canvas group for fading
         canvasGroup = GetComponent<CanvasGroup>();
