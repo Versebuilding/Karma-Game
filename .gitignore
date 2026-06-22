@@ -39,3 +39,4 @@ Thumbs.db
 *.blend[1-9]
 *.blend[1-9].meta
 
+*.csproj
