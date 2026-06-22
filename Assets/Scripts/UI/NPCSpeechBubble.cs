@@ -173,7 +173,12 @@ public class NPCSpeechBubble : MonoBehaviour
         if (targetNPC != null)
             registry[targetNPC] = this;
 
+        // The prefab has a two-level structure: NPCSpeechBubble on the root Transform,
+        // Canvas on a child. GetComponent only searches the same GameObject, so fall back
+        // to GetComponentInChildren before creating a duplicate Canvas on the root.
         worldCanvas = GetComponent<Canvas>();
+        if (worldCanvas == null)
+            worldCanvas = GetComponentInChildren<Canvas>(true);
         if (worldCanvas == null)
             worldCanvas = gameObject.AddComponent<Canvas>();
 
@@ -227,7 +232,7 @@ public class NPCSpeechBubble : MonoBehaviour
         if (continuePromptText == "Press E \u25B6" || continuePromptText == "Press Enter \u25B6")
             continuePromptText = "Press Enter >>";
 
-        var canvasRect = GetComponent<RectTransform>();
+        var canvasRect = worldCanvas.GetComponent<RectTransform>();
         if (canvasRect != null)
         {
             if (!useFixedScreenPosition)
@@ -746,8 +751,11 @@ public class NPCSpeechBubble : MonoBehaviour
         speechText.fontSizeMin = minFontSize;
         speechText.fontSizeMax = maxFontSize;
 
-        // Prevent TMP from truncating or showing "..." — content grows the bubble instead
-        speechText.overflowMode = TextOverflowModes.Overflow;
+        // SSO mode: text is bounded within BubblePanel — use Ellipsis to prevent spill.
+        // World-space mode: Overflow lets ContentSizeFitter grow the bubble to fit.
+        speechText.overflowMode = useFixedScreenPosition
+            ? TextOverflowModes.Ellipsis
+            : TextOverflowModes.Overflow;
 
         speechText.text = fullText;
         speechText.maxVisibleCharacters = int.MaxValue;
