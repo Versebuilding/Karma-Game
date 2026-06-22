@@ -6,6 +6,7 @@ public class BreadThrower : MonoBehaviour
     [SerializeField] private BreadProjectile breadProjectilePrefab;
     [SerializeField] private Transform throwOrigin;
     [SerializeField] private Camera aimCamera;
+    [SerializeField] private FeedingMiniGameManager miniGameManager;
 
     [Header("Charge")]
     [SerializeField] [Min(0f)] private float minThrowForce = 6f;
@@ -25,19 +26,15 @@ public class BreadThrower : MonoBehaviour
     private bool isCharging;
 
     public bool IsCharging => isCharging;
+    public Transform ThrowOrigin => throwOrigin;
+    public Camera AimCamera => aimCamera;
+    public FeedingMiniGameManager MiniGameManager => miniGameManager;
     public float ChargeNormalized => maxChargeTime <= 0f ? 1f : Mathf.Clamp01(chargeTimer / maxChargeTime);
+    public float CurrentThrowForce => Mathf.Lerp(minThrowForce, maxThrowForce, ChargeNormalized);
 
     private void Awake()
     {
-        if (throwOrigin == null)
-        {
-            throwOrigin = transform;
-        }
-
-        if (aimCamera == null && findMainCameraIfMissing)
-        {
-            aimCamera = Camera.main;
-        }
+        ResolveReferences();
     }
 
     private void Update()
@@ -58,9 +55,24 @@ public class BreadThrower : MonoBehaviour
         }
     }
 
+    public Vector3 GetCurrentLaunchVelocity()
+    {
+        if (throwOrigin == null)
+        {
+            return Vector3.zero;
+        }
+
+        return GetThrowDirection() * CurrentThrowForce;
+    }
+
     private void TryStartCharge()
     {
         if (Time.time < nextThrowTime)
+        {
+            return;
+        }
+
+        if (miniGameManager != null && !miniGameManager.IsRunning)
         {
             return;
         }
@@ -78,6 +90,12 @@ public class BreadThrower : MonoBehaviour
     {
         isCharging = false;
 
+        if (miniGameManager != null && !miniGameManager.IsRunning)
+        {
+            chargeTimer = 0f;
+            return;
+        }
+
         if (breadProjectilePrefab == null || throwOrigin == null)
         {
             chargeTimer = 0f;
@@ -85,7 +103,7 @@ public class BreadThrower : MonoBehaviour
         }
 
         Vector3 throwDirection = GetThrowDirection();
-        float throwForce = Mathf.Lerp(minThrowForce, maxThrowForce, ChargeNormalized);
+        float throwForce = CurrentThrowForce;
 
         BreadProjectile projectileInstance = Instantiate(
             breadProjectilePrefab,
@@ -93,10 +111,32 @@ public class BreadThrower : MonoBehaviour
             Quaternion.LookRotation(throwDirection)
         );
 
-        projectileInstance.Launch(throwDirection, throwForce, transform);
+        projectileInstance.Launch(throwDirection, throwForce, transform, miniGameManager);
 
         chargeTimer = 0f;
         nextThrowTime = Time.time + throwCooldown;
+    }
+
+    private void ResolveReferences()
+    {
+        if (throwOrigin == null)
+        {
+            throwOrigin = transform;
+        }
+
+        if (aimCamera == null && findMainCameraIfMissing)
+        {
+            aimCamera = Camera.main;
+        }
+
+        if (miniGameManager == null)
+        {
+            miniGameManager = GetComponentInParent<FeedingMiniGameManager>();
+            if (miniGameManager == null)
+            {
+                miniGameManager = FindFirstObjectByType<FeedingMiniGameManager>();
+            }
+        }
     }
 
     private Vector3 GetThrowDirection()
@@ -142,5 +182,7 @@ public class BreadThrower : MonoBehaviour
         {
             throwOrigin = transform;
         }
+
+        ResolveReferences();
     }
 }
