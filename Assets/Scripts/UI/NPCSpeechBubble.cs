@@ -193,8 +193,13 @@ public class NPCSpeechBubble : MonoBehaviour
                 scaler.dynamicPixelsPerUnit = 10f;
             }
         }
-        // useFixedScreenPosition=true: canvas is now root-level SSO. Position driven by
-        // BubblePanel.anchoredPosition in LateUpdate via WorldToScreenPoint.
+        else
+        {
+            // Unity forces WorldSpace on any canvas parented under a 3D object at instantiation.
+            // Unparenting (SetParent above) does NOT revert that. We must explicitly restore SSO.
+            worldCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        }
+        // Position driven by BubblePanel.anchoredPosition in LateUpdate via WorldToScreenPoint.
 
         // Canvas group for fading
         canvasGroup = GetComponent<CanvasGroup>();
