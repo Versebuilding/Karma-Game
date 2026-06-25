@@ -62,13 +62,16 @@
     <Compile Include="Assets\Scripts\Data\QuestSO.cs" />
     <Compile Include="Assets\Bitgem\StylisedWater\URP\Scripts\Bitgem\VFX\StylisedWater\WaterVolumeBox.cs" />
     <Compile Include="Assets\Scripts\ChapterLauncher.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\MiniGame_Bird\BirdFeedingTarget.cs" />
     <Compile Include="Assets\Scripts\UI\CoinFlyUI.cs" />
     <Compile Include="Assets\Scripts\Data\KarmaConfig.cs" />
     <Compile Include="Assets\Scripts\MiniGame\MiniGameMouseLook.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark02.cs" />
     <Compile Include="Assets\Scripts\UI\CoinCounterUI.cs" />
     <Compile Include="Assets\Bitgem\StylisedWater\URP\Scripts\Bitgem\VFX\StylisedWater\WaterVolumeBase.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\GhostHungry\Projectile.cs" />
     <Compile Include="Assets\Scripts\Interaction\InteractableBase.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\GhostHungry\UI\Trajectory.cs" />
     <Compile Include="Assets\Scripts\Environment\FallingFood.cs" />
     <Compile Include="Assets\Scripts\UI\HUDManager.cs" />
     <Compile Include="Assets\Bitgem\StylisedWater\URP\Scripts\Bitgem\VFX\StylisedWater\WaterVolumeTransforms.cs" />
@@ -129,15 +132,19 @@
     <Compile Include="Assets\Scripts\SernaAnimCycler.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\Scripts\MiniGame\BreadThrower.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\GhostHungry\BreadPiece.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark01.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TextMeshSpawner.cs" />
     <Compile Include="Assets\Scripts\VFX\SparkleVFXManager.cs" />
     <Compile Include="Assets\Scripts\UI\Compass\CompassService.cs" />
     <Compile Include="Assets\Scripts\UI\Compass\CompassIconPool.cs" />
     <Compile Include="Assets\Scripts\Objects\ClimbSurface.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\MiniGame_Bird\BirdDiveMovement.cs" />
     <Compile Include="Assets\Scripts\UI\Compass\CompassMarker.cs" />
     <Compile Include="Assets\Scripts\UI\DialogueUI.cs" />
     <Compile Include="Assets\Scripts\SernaInteraction.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\MiniGame_Bird\BirdInterceptMovement.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\GhostHungry\Managers\ThrowManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\CameraController.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark03.cs" />
     <Compile Include="Assets\Scripts\Managers\BackgroundMusicManager.cs" />
@@ -146,7 +153,6 @@
     <Compile Include="Assets\Scripts\UI\FPSCounter.cs" />
     <Compile Include="Assets\Scripts\UI\ChoiceButtonUI.cs" />
     <Compile Include="Assets\Scripts\UI\Compass\CompassHUDController.cs" />
-    <Compile Include="Assets\Scripts\MiniGame\BirdFeedingTarget.cs" />
     <Compile Include="Assets\Scripts\NPC\DialogueNPC.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerAnimationHandler.cs" />
     <Compile Include="Assets\Scripts\Objects\PickupObject.cs" />
@@ -159,21 +165,24 @@
     <Compile Include="Assets\Scripts\UI\Compass\CompassCardinalLabel.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ObjectSpin.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_PhoneNumberValidator.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\MiniGame_Bird\BirdSwarmMovement.cs" />
     <Compile Include="Assets\Scripts\MiniGame\BreadProjectile.cs" />
     <Compile Include="Assets\Scripts\UI\KarmaFlowerUI.cs" />
     <Compile Include="Assets\Scripts\ChapterCanvasSwitch.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TextConsoleSimulator.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TeleType.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextEventCheck.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\MiniGame_Bird\BirdCircleMovement.cs" />
     <Compile Include="Assets\Bitgem\StylisedWater\URP\Scripts\Bitgem\VFX\StylisedWater\WateverVolumeFloater.cs" />
     <Compile Include="Assets\Scripts\Managers\DialogueManager.cs" />
     <Compile Include="Assets\Scripts\Environment\TriggerZone.cs" />
     <Compile Include="Assets\Scripts\Interaction\QuestItemPickup.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TextMeshProFloatingText.cs" />
-    <Compile Include="Assets\Scripts\MiniGame\BirdDiveMovement.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\MiniGame_Bird\BirdFeedingUIManager.cs" />
     <Compile Include="Assets\Scripts\Player\StateMachine\PlayerStateMachine.cs" />
     <Compile Include="Assets\Scripts\Data\DialogueSO.cs" />
     <Compile Include="Assets\Animation\QuickOutline\Scripts\Outline.cs" />
+    <Compile Include="Assets\Scripts\MiniGame\MiniGame_Bird\BirdPatternGroupController.cs" />
     <Compile Include="Assets\Scripts\RotateImagev2.cs" />
     <Compile Include="Assets\Scripts\Player\PlayerInputHandler.cs" />
   </ItemGroup>
@@ -717,7 +726,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Runtime.CompilerServices.Unsafe">
-      <HintPath>Library\PackageCache\com.unity.collections@aea9d3bd5e19\Unity.Collections.Tests\System.Runtime.CompilerServices.Unsafe\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <HintPath>Assets\Plugins\NuGet\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
