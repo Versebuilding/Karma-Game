@@ -272,7 +272,7 @@ GameObject:
   m_Component:
   - component: {fileID: 541747805}
   m_Layer: 0
-  m_Name: Bird
+  m_Name: Entity
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -474,6 +474,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1110210827}
+  - component: {fileID: 1110210828}
   m_Layer: 0
   m_Name: Phase Manager
   m_TagString: Untagged
@@ -496,6 +497,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 702829488}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1110210828
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1110210826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ad9de1abfcfc434288a93cad448eb5b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isActive: 1
+  phases:
+  - {fileID: 11400000, guid: df957cbc4f8af304281b31b5980a6c42, type: 2}
+  - {fileID: 11400000, guid: 3603695192b8e664a88dda06f4e54a3d, type: 2}
+  - {fileID: 11400000, guid: 6611914d81faf1640bec92e5f44d9be5, type: 2}
+  - {fileID: 11400000, guid: 5546beb1198da734c8a0bf493af236e1, type: 2}
 --- !u!1 &1235279121
 GameObject:
   m_ObjectHideFlags: 0
@@ -527,7 +546,6 @@ Transform:
   m_Children:
   - {fileID: 1792801879}
   - {fileID: 541747805}
-  - {fileID: 2111531985}
   m_Father: {fileID: 484975913}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1241467240
@@ -890,9 +908,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   throwManager: {fileID: 1627246759}
+  breadThrower: {fileID: 0}
   throwOrigin: {fileID: 1862511135}
+  ignoredRoot: {fileID: 0}
+  showWhileChargingOnly: 0
   maxSimulationSteps: 50
   timeStep: 0.05
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 115
+  triggerInteraction: 1
 --- !u!1 &1441024240
 GameObject:
   m_ObjectHideFlags: 0
@@ -980,7 +1005,7 @@ MonoBehaviour:
   objectCount: 6
   throwForceRange: {x: 2, y: 10}
   chargeDuration: 1.5
-  throwCooldown: 2
+  throwCooldown: 1
   inputActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &1717783511
 GameObject:
@@ -1100,6 +1125,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1804213648}
+  - component: {fileID: 1804213649}
   m_Layer: 0
   m_Name: Entity Manager
   m_TagString: Untagged
@@ -1122,6 +1148,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 702829488}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1804213649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1804213647}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9c2f4e115bbd2743bd2ce7101040b4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spawnParent: {fileID: 541747804}
 --- !u!1 &1862511134
 GameObject:
   m_ObjectHideFlags: 0
@@ -1152,37 +1191,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1441024242}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2111531984
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2111531985}
-  m_Layer: 0
-  m_Name: Fish
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2111531985
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2111531984}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1235279122}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2122032248
 GameObject:
