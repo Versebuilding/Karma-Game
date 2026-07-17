@@ -415,7 +415,6 @@ public class FeedingMiniGameManager : MonoBehaviour
             CreatePatternSetup("Pattern 1 - Dive Feed", BirdRoundPattern.DiveFeed),
             CreatePatternSetup("Pattern 2 - Circle & Snatch", BirdRoundPattern.CircleAndSnatch),
             CreatePatternSetup("Pattern 3 - Swarm Panic", BirdRoundPattern.SwarmPanic),
-            CreatePatternSetup("Pattern 4 - Aggressive Hunger", BirdRoundPattern.AggressiveHunger),
         };
     }
 
