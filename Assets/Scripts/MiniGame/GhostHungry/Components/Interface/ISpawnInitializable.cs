@@ -14,7 +14,7 @@ using UnityEngine;
 /// </remarks>
 public interface ISpawnInitializable {
     /// <summary>
-    /// This function, when implemented, should initialize an unfinished object through the provided raw instanciation data
+    /// Initialize an unfinished object through the provided raw instantiation data
     /// </summary>
     /// <param name="data">A data container which holds all required instantiation data, potentially in an unsanitized, original state</param>
     void InitializeSpawnedInstance(ScriptableObject data);

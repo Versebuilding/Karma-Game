@@ -3,6 +3,19 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
+/* Implement
+- Charge Locking
+- List-Based Indexing
+- Don't like how aiming feels - needs refactoring
+*/
+
+// FIX: add key movement capabilities for accessibility
+
+/// <summary>
+/// A centralized system for stationary object throwing which interfaces with the physics simulation. It manages the
+/// lifecycle for a set of identical <see cref="Projectile"/> instances, the objects which are thrown. The system
+/// utilizes object pooling to reduce the overhead of constant instantiation and destruction of objects. 
+/// </summary>
 public class ThrowManager : MonoBehaviour
 {
     public UnityEvent ThrowRegistered = new();
@@ -114,12 +127,15 @@ public class ThrowManager : MonoBehaviour
         projectile.Physicsbody.linearVelocity = GetThrowVelocity();
     }
 
+    /// <returns>
+    /// An object's initial velocity for its thrown trajectory, based upon the current charge and mouse position
+    /// </returns>
     public Vector3 GetThrowVelocity() {
         return (GetThrowDirection() + Vector3.up) * Mathf.Lerp(throwForceRange.y, throwForceRange.x, chargeTimer / chargeDuration);
     }
 
     private Vector3 GetThrowDirection() { // FIX: update to new Input system upon approval
-        Vector3 direction = new Vector3(Mathf.Lerp(-10, 10, Input.mousePosition.x / Camera.main.pixelWidth), 0, 0) - throwOrigin.position;
+        Vector3 direction = new Vector3(Mathf.Lerp(-10, 10, Input.mousePosition.x / Camera.main.pixelWidth), 0, 0) - throwOrigin.position; // FIX: convert to dynamic positioning
         // / : mouse's horizontal position on screen as a factor
         // Lerp : mouse's factor converted into 3D space location (target)
         // - : 3D direction from origin to target
@@ -165,6 +181,10 @@ public class ThrowManager : MonoBehaviour
         ((Projectile)projectiles.GetValue(nextIndex)).transform.position = throwOrigin.position;
     }
 
+	/// <summary>
+	/// Reintroduce the <see cref="Projectile"/> object at <paramref name="index"/> into the available object pool or destroy it if its a temp object
+	/// </summary>
+	/// <param name="index">The referencing index for the object, which child of <see cref="storageFolder"/> is being reset</param>
     public void ResetThrowObject(int index) {
         // Destroy temporary objects
         if (index >= objectCount) {

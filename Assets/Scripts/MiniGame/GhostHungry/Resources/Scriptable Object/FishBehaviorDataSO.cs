@@ -13,7 +13,7 @@ public class FishBehaviorDataSO : ScriptableObject
     [Tooltip("Limits how many fish mouths may be open concurrently for this phase (0 = unlimited)")]
     [SerializeField][Min(0)] private int maxConcurrentOpens = 0;
     /// <summary>
-    /// Limit on how many fish mouths may be open concurrently for this phase (0 = unlimited)
+	/// Limit on how many fish mouths may be open concurrently for this phase (<c>0</c> = unlimited)
     /// </summary>
     public int MaxConcurrentOpens => maxConcurrentOpens;
 
@@ -33,30 +33,30 @@ public class FishBehaviorDataSO : ScriptableObject
     /// </summary>
     public float ClosedDuration => closedDuration;
 
-    [Tooltip("Variation factor [0-1] for durations, determines the viable offset from the base value (0 = no offset, 1 = total offset)")]
+    [Tooltip("Variation factor [0 - 1] for durations, determines the viable offset from the base value (0 = no offset, 1 = total offset)")]
     [SerializeField][Range(0f, 1f)] private float rhythmVariance = 0f;
     /// <summary>
     /// Variation factor for durations, determines the viable offset from the base value
     /// </summary>
     /// <remarks>
-    /// <b>Range:</b> [0 - 1] <br/>
-    /// - 0 = no offset <br/>
-    /// - 1 = total offset
+	/// <b>Range:</b> <c>[0, 1]</c> <br/>
+	/// - <c>0</c> = no offset <br/>
+	/// - <c>1</c> = total offset
     /// </remarks>
     public float RhythmVariance => rhythmVariance;
 
 
     [Header("Fakeout")]
-    [Tooltip("Chance factor [0-1] for any fish to perform a fakeout (short open used to 'trick' players)")]
+    [Tooltip("Chance factor [0 - 1] for any fish to perform a fakeout (short open used to 'trick' players)")]
     [SerializeField][Range(0f, 1f)] private float fakeoutChance = 0f;
     /// <summary>
     /// Chance factor for any fish to perform a fakeout
     /// </summary>
     /// <remarks>
     /// <b>Fakeout:</b> A short open phase used to 'trick' players into prematurely throwing<br/>
-    /// <b>Range:</b> [0 - 1] <br/>
-    /// - 0 = no fakeouts <br/>
-    /// - 1 = only fakeouts
+	/// <b>Range:</b> <c>[0, 1]</c> <br/>
+	/// - <c>0</c> = no fakeouts <br/>
+	/// - <c>1</c> = only fakeouts
     /// </remarks>
     public float FakeoutChance => fakeoutChance;
 
