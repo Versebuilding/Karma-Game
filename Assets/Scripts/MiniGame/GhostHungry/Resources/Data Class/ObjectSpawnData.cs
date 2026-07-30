@@ -15,9 +15,13 @@ public class ObjectSpawnData {
     [Tooltip("Locations to instantiate the prefab instance")]
     [SerializeField] private List<Vector3> positions = new();
 
+	/// <summary>
+	/// The prefab object which is instantiated from
+	/// </summary>
     public GameObject Prefab => prefab;
-
-    /// <remarks>Read-Only Property</remarks>
+	/// <summary>
+    /// Read-only list of locations to instantiate the prefab instance
+    /// </summary>
     public IReadOnlyList<Vector3> Positions => positions;
     // Positions.Count == number of spawned instances : programmatically ensures equivalency between instance count and list length w/o requiring validation
 }

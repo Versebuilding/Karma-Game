@@ -5,8 +5,8 @@ using UnityEngine.Events;
 // FIX: make modular, separate feedable and cycle behavior
 
 /* Implement:
-- Phase 3 : "Some open only if ignored"
-- Overfed decay : currently fedvalue only increases (doesn't make sense), it should decrease to allow falling out of greedy mode
+- Phase 3 : "Some open only if ignored" - (scalar += delta/factor)
+- Overfed decay : currently fedvalue only increases (doesn't make sense), it should decrease to allow falling out of greedy mode (Timer -= delta, <0 decrement)
 */
 
 /// <summary>

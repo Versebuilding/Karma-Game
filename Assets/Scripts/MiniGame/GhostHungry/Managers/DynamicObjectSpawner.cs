@@ -3,6 +3,7 @@ using UnityEngine;
 
 // FiX: Too much inter-phase overhead : replicated object inter-phase persistence _OR_ total phase spawning & staging
 // FiX: System Too dependent on Phase System, needs to be broken away : Extension Builder
+// FIX: allow between phase staying
 
 /// <summary>
 /// A lifecycle manager for a collection of predetermined objects which must be instantiated and destroyed dynamically during the program's runtime

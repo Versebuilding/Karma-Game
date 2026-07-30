@@ -47,7 +47,7 @@ public interface IFeedableBehavior
     /// <summary>
     /// Set the active state of the cycler to <paramref name="enabled"/>, manipulate <see cref="CycleCoroutine"/> to comply
     /// </summary>
-    /// <param name="enabled">Whether the cycler should be active (true) or inactive (false)</param>
+	/// <param name="enabled">Whether the cycler should be active (<see langword="true"/>) or inactive (<see langword="false"/>)</param>
     void SetAutoCycle(bool enabled);
 
     /// <summary>
