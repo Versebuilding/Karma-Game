@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7e023c41b52f492bbdb8f500acc5330, type: 3}
+  m_Name: Q3_HungerTest
+  m_EditorClassIdentifier: 
+  questId: Q3_hunger_test
+  displayName: Hunger Returns
+  description: Ananda gave you bread, but you notice someone who looks hungrier than
+    you.
+  questType: 0
+  objectives:
+  - objectiveId: decide_bread
+    description: Decide what to do with the bread
+    type: 6
+    targetId: 
+    requiredCount: 1
+    isOptional: 0
+    visibility: 1
+    canFail: 0
+    retryAllowed: 0
+    fallbackDialogueId: 
+  rewards:
+    karmaAmount: 0
+    coinAmount: 0
+    items: []
+    flagsToSet:
+    - Q3_complete
+    questsToUnlock: []
+  prerequisites:
+  - Q1_find_ananda
+  autoStart: 0
+  isRepeatable: 0
+  tags:
+  - chapter_1
+  - main_story
+  - moral_choice

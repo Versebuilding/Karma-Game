@@ -1,0 +1,410 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d9823f1389b9494fb873a7bbf134a97, type: 3}
+  m_Name: OldManGhost_Intro
+  m_EditorClassIdentifier: 
+  dialogueId: oldmanghost_intro
+  nodes:
+  - nodeId: omg_start
+    speakerName: Old Man Ghost
+    dialogueText: Oh... you can see me? Most living souls pass right through without
+      a glance. It has been so long since anyone stopped.
+    voiceClip: {fileID: 8300000, guid: 72e45061b082a4c9b84e49b682f2cbca, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_strange
+    isEnd: 0
+    conditions: []
+    onShowActions:
+    - rid: 1808434539632263307
+  - nodeId: omg_strange
+    speakerName: Old Man Ghost
+    dialogueText: Strange... you have a warmth about you. The others here, they've
+      forgotten what that feels like. I almost have too.
+    voiceClip: {fileID: 8300000, guid: 112efda771cd0411d98aa721bfbfba86, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_choice1
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_choice1
+    speakerName: Old Man Ghost
+    dialogueText: I've been trapped here, between worlds. This hunger... it's not
+      of the body. It's something deeper. Do you understand?
+    voiceClip: {fileID: 8300000, guid: 41704a84ad3a14deb92ef8553585e8a2, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices:
+    - choiceText: I'm not sure, but I'm listening.
+      inputLabel: Z
+      nextNodeId: omg_r1_neutral
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263308
+    - choiceText: That sounds painful. I'm sorry you're going through this.
+      inputLabel: X
+      nextNodeId: omg_r1_empathetic
+      karmaChange: 15
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263309
+      - rid: 1808434539632263310
+    - choiceText: Sounds like a you problem. Why should I care?
+      inputLabel: C
+      nextNodeId: omg_r1_harsh
+      karmaChange: -10
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 1
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263311
+      - rid: 1808434539632263312
+    nextNodeId: 
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r1_neutral
+    speakerName: Old Man Ghost
+    dialogueText: Listening... yes, that's more than most do. Perhaps that is enough
+      for now.
+    voiceClip: {fileID: 8300000, guid: 7c282c3081bcc4be395b729ebc7e72ad, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_lore1
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r1_empathetic
+    speakerName: Old Man Ghost
+    dialogueText: You feel it too, don't you? That ache when you see another suffer.
+      That is a rare gift, child. Hold onto it.
+    voiceClip: {fileID: 8300000, guid: 7c0c3041401d243d9aca8e230f9cbaa6, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_lore1
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r1_harsh
+    speakerName: Old Man Ghost
+    dialogueText: Hmm... I once thought like that too. Before I ended up here. The
+      world has a way of teaching us, whether we want to learn or not.
+    voiceClip: {fileID: 8300000, guid: 1ca4ce38b585848c38face4463b3e5c7, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_lore1
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_lore1
+    speakerName: Old Man Ghost
+    dialogueText: "This place... they call it the Hungry Ghost Realm. Everyone here
+      is consumed by something \u2014 greed, loneliness, regret."
+    voiceClip: {fileID: 8300000, guid: aaa8dfd2920ad49d9b2ab7a540ba9b7a, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_lore2
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_lore2
+    speakerName: Old Man Ghost
+    dialogueText: We wander with bellies that can never be filled and throats too
+      narrow to swallow. A fitting punishment, some would say.
+    voiceClip: {fileID: 8300000, guid: 60125e768040c4a8db39cb55d336ca89, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_lore3
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_lore3
+    speakerName: Old Man Ghost
+    dialogueText: But I wonder... is it punishment? Or is it a mirror? Showing us
+      what we refused to see when we were alive?
+    voiceClip: {fileID: 8300000, guid: c249d2e372323400f948e43524d9d0d9, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_choice2
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_choice2
+    speakerName: Old Man Ghost
+    dialogueText: "In life, I hoarded everything \u2014 food, wealth, even kindness.
+      I kept it all for myself. And now look at me. What do you think of that?"
+    voiceClip: {fileID: 8300000, guid: 0abc58d13d1c4407aa261304d8b5ee14, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices:
+    - choiceText: That's an interesting perspective.
+      inputLabel: Z
+      nextNodeId: omg_r2_neutral
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    - choiceText: It takes courage to see your own mistakes. That's the first step
+        to freedom.
+      inputLabel: X
+      nextNodeId: omg_r2_empathetic
+      karmaChange: 20
+      coinChange: 10
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263313
+      - rid: 1808434539632263314
+    - choiceText: What was it like, hoarding all that? Did it feel good?
+      inputLabel: C
+      nextNodeId: omg_r2_curious
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    nextNodeId: 
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r2_neutral
+    speakerName: Old Man Ghost
+    dialogueText: Perspective... yes. That's all a ghost has left, I suppose.
+    voiceClip: {fileID: 8300000, guid: 558bce0c52eed4dab86fe1dfc0b30efc, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_quest_hook
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r2_empathetic
+    speakerName: Old Man Ghost
+    dialogueText: "Freedom... I hadn't dared to hope for that. But your words stir
+      something I thought was long dead. Here \u2014 take these coins. I have no
+      use for them now."
+    voiceClip: {fileID: 8300000, guid: 51363ae1be2a9441d9723e1b5ddcab0f, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_quest_hook
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r2_curious
+    speakerName: Old Man Ghost
+    dialogueText: Feel good? Ha! It felt like power. Until it didn't. Until I realized
+      I was building a cage around myself, one coin at a time.
+    voiceClip: {fileID: 8300000, guid: 9b27d07442b884076939376123d5c659, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_quest_hook
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_quest_hook
+    speakerName: Old Man Ghost
+    dialogueText: But you... you're different. You're still alive. You can still
+      change. There's someone who might help you understand all this better.
+    voiceClip: {fileID: 8300000, guid: d5b5061806d8e4d2ab048e114137f3d5, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_ananda1
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_ananda1
+    speakerName: Old Man Ghost
+    dialogueText: "Up on the hill, past the old stone path, there's a temple. A monk
+      lives there \u2014 they call him Ananda. He sees things others can't."
+    voiceClip: {fileID: 8300000, guid: b6747909722dd4686976338e1a9c67ac, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_ananda2
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_ananda2
+    speakerName: Old Man Ghost
+    dialogueText: He helped me once, long ago. Tried to, anyway. I wasn't ready to
+      listen then. Maybe you will be.
+    voiceClip: {fileID: 8300000, guid: a87cba11ca7944cf9b87ee943ca8641a, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_choice3
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_choice3
+    speakerName: Old Man Ghost
+    dialogueText: Will you seek him out? Ananda, at the hilltop temple? He may have
+      answers that I never found.
+    voiceClip: {fileID: 8300000, guid: 0867af5de116b4f2bacfb5a5b3959fe0, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices:
+    - choiceText: I'll check it out.
+      inputLabel: Z
+      nextNodeId: omg_r3_neutral
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    - choiceText: Of course. If there's a chance to help, I want to try.
+      inputLabel: X
+      nextNodeId: omg_r3_empathetic
+      karmaChange: 10
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263315
+    - choiceText: Why would I waste my time on some monk?
+      inputLabel: C
+      nextNodeId: omg_r3_harsh
+      karmaChange: -5
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 1
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263316
+    nextNodeId: 
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r3_neutral
+    speakerName: Old Man Ghost
+    dialogueText: Good enough. The path reveals itself to those who walk it.
+    voiceClip: {fileID: 8300000, guid: 9b258765d7f6642a5a97b493f62620fe, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_quest_start
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r3_empathetic
+    speakerName: Old Man Ghost
+    dialogueText: "Your heart is in the right place, child. Ananda will see that.
+      Go \u2014 and carry that warmth with you."
+    voiceClip: {fileID: 8300000, guid: c3904b1458e8a4c5b803751f92cee270, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_quest_start
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_r3_harsh
+    speakerName: Old Man Ghost
+    dialogueText: Because the alternative is ending up like me. But suit yourself.
+      The temple is up the hill, if you change your mind.
+    voiceClip: {fileID: 8300000, guid: 33c56b58f6b554e52ac81420d0e0c4d2, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_quest_start
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: omg_quest_start
+    speakerName: Old Man Ghost
+    dialogueText: "Follow the stone path up the hill. You'll see the temple at the
+      top. Ananda will be there \u2014 he always is."
+    voiceClip: {fileID: 8300000, guid: 29674268fd688429b956cfb0e95df3f8, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: omg_final
+    isEnd: 0
+    conditions: []
+    onShowActions:
+    - rid: 1808434539632263317
+  - nodeId: omg_final
+    speakerName: Old Man Ghost
+    dialogueText: Go now. And Sammy... thank you for stopping. It's been a long time
+      since anyone did.
+    voiceClip: {fileID: 8300000, guid: 289677978d75b4cb2b1c2610ad2ec1c0, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: 
+    isEnd: 1
+    conditions: []
+    onShowActions: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 1808434539632263307
+      type: {class: SetFlagAction, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: met_old_man_ghost
+        value: 1
+    - rid: 1808434539632263308
+      type: {class: SetFlagAction, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: chose_neutral_npc1
+        value: 1
+    - rid: 1808434539632263309
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: 15
+    - rid: 1808434539632263310
+      type: {class: SetFlagAction, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: chose_compassion_npc1
+        value: 1
+    - rid: 1808434539632263311
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: -10
+    - rid: 1808434539632263312
+      type: {class: SetFlagAction, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: chose_harsh_npc1
+        value: 1
+    - rid: 1808434539632263313
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: 20
+    - rid: 1808434539632263314
+      type: {class: ModifyCoinsAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: 10
+    - rid: 1808434539632263315
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: 10
+    - rid: 1808434539632263316
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: -5
+    - rid: 1808434539632263317
+      type: {class: StartQuestAction, ns: , asm: Assembly-CSharp}
+      data:
+        questId: Q1_find_ananda

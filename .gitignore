@@ -46,3 +46,7 @@ Thumbs.db
 *.csproj
 *.sln*
 .vsconfig
+.claude/worktrees/
+mono_crash*
+.mcp.json
+generate_docs_pdf.py

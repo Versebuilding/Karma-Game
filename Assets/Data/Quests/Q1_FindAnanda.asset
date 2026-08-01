@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7e023c41b52f492bbdb8f500acc5330, type: 3}
+  m_Name: Q1_FindAnanda
+  m_EditorClassIdentifier: 
+  questId: Q1_find_ananda
+  displayName: Find the Seeker of Truth
+  description: The old ghost spoke of a monk named Ananda who lives at the hilltop
+    temple. Perhaps he can help.
+  questType: 0
+  objectives:
+  - objectiveId: reach_temple
+    description: Find the hilltop temple
+    type: 2
+    targetId: temple_entrance
+    requiredCount: 1
+    isOptional: 0
+    visibility: 2
+    canFail: 0
+    retryAllowed: 0
+    fallbackDialogueId: 
+  rewards:
+    karmaAmount: 25
+    coinAmount: 0
+    items: []
+    flagsToSet:
+    - Q1_complete
+    questsToUnlock: []
+  prerequisites: []
+  autoStart: 0
+  isRepeatable: 0
+  tags:
+  - chapter_1
+  - main_story

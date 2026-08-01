@@ -29,10 +29,6 @@ public class NPCSpeechBubble : MonoBehaviour
     private static readonly System.Collections.Generic.Dictionary<Transform, NPCSpeechBubble>
         registry = new System.Collections.Generic.Dictionary<Transform, NPCSpeechBubble>();
 
-    // True while a screen-space (useFixedScreenPosition) bubble is active.
-    // WorldSpace bubbles check this to avoid double-showing during the same dialogue.
-    private static bool s_screenSpaceBubbleActive = false;
-
     /// <summary>Find the speech bubble associated with a given NPC transform.</summary>
     public static NPCSpeechBubble GetBubbleForNPC(Transform npc)
     {
@@ -64,8 +60,8 @@ public class NPCSpeechBubble : MonoBehaviour
     [Tooltip("When true, positions the bubble in screen space relative to the NPC using the offset below. Canvas stays as Screen Space Overlay — no world-space math.")]
     [SerializeField] private bool useFixedScreenPosition = false;
 
-    [Tooltip("Local position of this Canvas within the parent canvas hierarchy. Set once to where the bubble looks correct in Play Mode — the script locks it there every frame.")]
-    [SerializeField] private Vector3 fixedScreenPosition = new Vector3(328f, 178f, 82f);
+    [Tooltip("Screen-pixel offset from the NPC's screen position. X negative = left, X positive = right, Y positive = up. Z is ignored. Tune in Play Mode and it takes effect immediately.")]
+    [SerializeField] private Vector3 fixedScreenPosition = new Vector3(-300f, 200f, 0f);
 
     [Header("References (auto-created if empty)")]
     [Tooltip("The bubble panel root")]
@@ -151,44 +147,29 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         mainCamera = Camera.main;
 
-        // Always auto-find NPC from parent hierarchy FIRST — the serialized reference
-        // is unreliable (can point to the wrong object after scene setup changes).
-        // SpeechBubble is always a child of the NPC, so GetComponentInParent<DialogueNPC>()
-        // is the authoritative way to find the correct NPC before we unparent.
-        var parentDialogueNPC = GetComponentInParent<DialogueNPC>();
-        if (parentDialogueNPC != null)
+        // Auto-find target NPC from parent BEFORE unparenting
+        if (targetNPC == null)
         {
-            targetNPC = parentDialogueNPC.transform;
-        }
-        else
-        {
-            var parentNPCBase = GetComponentInParent<NPCBase>();
-            if (parentNPCBase != null)
-                targetNPC = parentNPCBase.transform;
-            else if (targetNPC == null)
-                targetNPC = transform.parent?.parent; // Canvas → SpeechBubble → NPC root
+            var npc = GetComponentInParent<NPCBase>();
+            if (npc != null)
+                targetNPC = npc.transform;
+            else
+                targetNPC = transform.parent;
         }
 
         // Register so DialogueUI can find us by NPC transform
         if (targetNPC != null)
             registry[targetNPC] = this;
 
-        // The prefab has a two-level structure: NPCSpeechBubble on the root Transform,
-        // Canvas on a child. GetComponent only searches the same GameObject, so fall back
-        // to GetComponentInChildren before creating a duplicate Canvas on the root.
         worldCanvas = GetComponent<Canvas>();
-        if (worldCanvas == null)
-            worldCanvas = GetComponentInChildren<Canvas>(true);
         if (worldCanvas == null)
             worldCanvas = gameObject.AddComponent<Canvas>();
 
-        // Always unparent: WorldSpace needs it for billboard positioning;
-        // Screen Space Overlay needs it so the canvas is a root-level SSO (parenting under
-        // a 3D object causes Unity to force WorldSpace mode, producing a huge 3D panel).
-        transform.SetParent(null, false);
-
         if (!useFixedScreenPosition)
         {
+            // Dynamic World Space mode: unparent so parent rotation/scale can't interfere,
+            // then switch canvas to World Space for 3D billboard positioning.
+            transform.SetParent(null, false);
             worldCanvas.renderMode = RenderMode.WorldSpace;
 
             var scaler = GetComponent<CanvasScaler>();
@@ -198,13 +179,8 @@ public class NPCSpeechBubble : MonoBehaviour
                 scaler.dynamicPixelsPerUnit = 10f;
             }
         }
-        else
-        {
-            // Unity forces WorldSpace on any canvas parented under a 3D object at instantiation.
-            // Unparenting (SetParent above) does NOT revert that. We must explicitly restore SSO.
-            worldCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        }
-        // Position driven by BubblePanel.anchoredPosition in LateUpdate via WorldToScreenPoint.
+        // useFixedScreenPosition=true: canvas stays as Screen Space Overlay child of its parent.
+        // Position is driven by BubblePanel.anchoredPosition in LateUpdate — no unparenting needed.
 
         // Canvas group for fading
         canvasGroup = GetComponent<CanvasGroup>();
@@ -232,27 +208,12 @@ public class NPCSpeechBubble : MonoBehaviour
         if (continuePromptText == "Press E \u25B6" || continuePromptText == "Press Enter \u25B6")
             continuePromptText = "Press Enter >>";
 
-        var canvasRect = worldCanvas.GetComponent<RectTransform>();
+        // Enforce canvas size/pivot up front (scale set later, proportional to NPC)
+        var canvasRect = GetComponent<RectTransform>();
         if (canvasRect != null)
         {
-            if (!useFixedScreenPosition)
-            {
-                // World Space mode: fixed canvas rect with bottom-center pivot so the
-                // bubble sits above the NPC offset point.
-                canvasRect.sizeDelta = new Vector2(600, 400);
-                canvasRect.pivot = new Vector2(0.5f, 0f);
-            }
-            else
-            {
-                // Screen Space Overlay mode: canvas must fill screen with center pivot.
-                // Changing pivot/sizeDelta here shifts the coordinate system and
-                // makes BubblePanel land at the wrong position.
-                canvasRect.anchorMin = Vector2.zero;
-                canvasRect.anchorMax = Vector2.one;
-                canvasRect.offsetMin = Vector2.zero;
-                canvasRect.offsetMax = Vector2.zero;
-                canvasRect.pivot = new Vector2(0.5f, 0.5f);
-            }
+            canvasRect.sizeDelta = new Vector2(600, 400);
+            canvasRect.pivot = new Vector2(0.5f, 0f); // bottom-center: bubble sits above the offset point
         }
 
         // Build UI if not already set up
@@ -360,35 +321,25 @@ public class NPCSpeechBubble : MonoBehaviour
 
         if (useFixedScreenPosition)
         {
-            // Root SS Overlay canvas: position is driven by BubblePanel.anchoredPosition.
-            // Convert NPC world position → screen pixels → canvas-local coords → anchoredPosition.
+            // Screen Space Overlay: move the BubblePanel within the canvas by converting
+            // the NPC's screen position + pixel offset into canvas-local coordinates.
             if (bubblePanel != null && mainCamera != null)
             {
                 Vector3 npcScreen = mainCamera.WorldToScreenPoint(targetNPC.position);
-                if (npcScreen.z > 0f)
+                if (npcScreen.z > 0f) // NPC is visible in front of camera
                 {
-                    // fixedScreenPosition: screen-pixel offset from NPC (x neg=left, y pos=up)
                     Vector2 targetScreen = new Vector2(
                         npcScreen.x + fixedScreenPosition.x,
                         npcScreen.y + fixedScreenPosition.y);
 
                     var canvasRect = worldCanvas.GetComponent<RectTransform>();
+                    Camera evtCam = worldCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : mainCamera;
                     Vector2 localPos;
                     if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                            canvasRect, targetScreen, null, out localPos))
+                            canvasRect, targetScreen, evtCam, out localPos))
                     {
                         var rt = bubblePanel.GetComponent<RectTransform>();
-                        if (rt != null)
-                        {
-                            // Clamp so bubble stays fully on screen.
-                            float halfW = rt.sizeDelta.x * 0.5f;
-                            float halfH = rt.sizeDelta.y * 0.5f;
-                            float halfSW = Screen.width * 0.5f;
-                            float halfSH = Screen.height * 0.5f;
-                            localPos.x = Mathf.Clamp(localPos.x, -halfSW + halfW, halfSW - halfW);
-                            localPos.y = Mathf.Clamp(localPos.y, -halfSH + halfH, halfSH - halfH);
-                            rt.anchoredPosition = localPos;
-                        }
+                        if (rt != null) rt.anchoredPosition = localPos;
                     }
                 }
             }
@@ -444,9 +395,6 @@ public class NPCSpeechBubble : MonoBehaviour
 
     private void HandleDialogueStarted(DialogueSO dialogue)
     {
-        if (useFixedScreenPosition)
-            s_screenSpaceBubbleActive = true;
-
         var dialogueNPC = targetNPC?.GetComponent<DialogueNPC>();
         if (dialogueNPC == null) return;
         ComputeDialogueOffset();
@@ -530,17 +478,6 @@ public class NPCSpeechBubble : MonoBehaviour
     private bool IsActiveNPCSpeaker(string speakerName)
     {
         if (DialogueManager.Instance == null) return false;
-
-        // WorldSpace bubbles yield to the screen-space bubble when one is active —
-        // otherwise both render simultaneously over the same NPC.
-        if (!useFixedScreenPosition && s_screenSpaceBubbleActive)
-            return false;
-
-        // Only show if this bubble's NPC is the one actually in dialogue.
-        var activeNPCTransform = DialogueManager.Instance.ActiveNPCTransform;
-        if (activeNPCTransform != null && targetNPC != null && activeNPCTransform != targetNPC)
-            return false;
-
         string npcName = DialogueManager.Instance.ActiveNPCSpeakerName;
         if (string.IsNullOrEmpty(npcName) || string.IsNullOrEmpty(speakerName))
             return false;
@@ -556,8 +493,6 @@ public class NPCSpeechBubble : MonoBehaviour
         }
         isTypewriting = false;
         _dialogueModeActive = false;
-        if (useFixedScreenPosition)
-            s_screenSpaceBubbleActive = false;
         Hide();
     }
 
@@ -756,19 +691,13 @@ public class NPCSpeechBubble : MonoBehaviour
     {
         if (speechText == null) return;
 
-        // Always use auto-sizing so TMP picks the best size in range.
-        // SSO canvas units = screen pixels (Constant Pixel Size, scale=1); use smaller
-        // sizes that look right on screen. WorldSpace uses the serialized values sized
-        // for the tiny canvas scale (~0.026–0.039).
+        // Always use auto-sizing so TMP picks the best size in range
         speechText.enableAutoSizing = true;
-        speechText.fontSizeMin = useFixedScreenPosition ? 12f : minFontSize;
-        speechText.fontSizeMax = useFixedScreenPosition ? 18f : maxFontSize;
+        speechText.fontSizeMin = minFontSize;
+        speechText.fontSizeMax = maxFontSize;
 
-        // SSO mode: text is bounded within BubblePanel — use Ellipsis to prevent spill.
-        // World-space mode: Overflow lets ContentSizeFitter grow the bubble to fit.
-        speechText.overflowMode = useFixedScreenPosition
-            ? TextOverflowModes.Ellipsis
-            : TextOverflowModes.Overflow;
+        // Prevent TMP from truncating or showing "..." — content grows the bubble instead
+        speechText.overflowMode = TextOverflowModes.Overflow;
 
         speechText.text = fullText;
         speechText.maxVisibleCharacters = int.MaxValue;
