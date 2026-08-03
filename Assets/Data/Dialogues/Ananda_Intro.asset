@@ -1,0 +1,505 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d9823f1389b9494fb873a7bbf134a97, type: 3}
+  m_Name: Ananda_Intro
+  m_EditorClassIdentifier: 
+  dialogueId: ananda_intro
+  nodes:
+  - nodeId: an_intro
+    speakerName: Ananda
+    dialogueText: Ah... a visitor. I felt your presence on the path before you arrived.
+      Please, sit. You've come a long way.
+    voiceClip: {fileID: 8300000, guid: b7079388f3e4e46d99656c7a45c0c4f7, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_pause
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_pause
+    speakerName: Ananda
+    dialogueText: "You carry something with you. Not in your hands \u2014 in your
+      heart. I can see it in the way you move. Tell me, what brings you to this temple?"
+    voiceClip: {fileID: 8300000, guid: b986e1a36bd4f47eeb112d37b836a110, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_choice1
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_choice1
+    speakerName: Ananda
+    dialogueText: Take your time. There is no rush here.
+    voiceClip: {fileID: 8300000, guid: 8b417ea1cdd14477f832250a1cf03e4b, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices:
+    - choiceText: A ghost told me to come here. Said you could help.
+      inputLabel: Z
+      nextNodeId: an_r1_neutral
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    - choiceText: I want to understand what's happening in this place. Why are the
+        ghosts suffering?
+      inputLabel: X
+      nextNodeId: an_r1_curious
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    - choiceText: I met a spirit in pain down the hill. I want to help, but I don't
+        know how.
+      inputLabel: C
+      nextNodeId: an_r1_empathetic
+      karmaChange: 15
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263318
+    nextNodeId: 
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r1_neutral
+    speakerName: Ananda
+    dialogueText: The old ghost sent you? Then he saw something in you worth sending.
+      That alone tells me much.
+    voiceClip: {fileID: 8300000, guid: 6ed0d66cee2c748c29c505811e13605a, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_callback_compassion
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r1_curious
+    speakerName: Ananda
+    dialogueText: A question worth asking. Most who come here see the suffering and
+      look away. You looked closer. That takes a certain kind of courage.
+    voiceClip: {fileID: 8300000, guid: 2dea21e0d7026410b8912e10a9e0e8d2, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_callback_compassion
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r1_empathetic
+    speakerName: Ananda
+    dialogueText: "You felt his pain and came seeking a way to ease it. That impulse
+      \u2014 don't lose it. It's rarer than you know."
+    voiceClip: {fileID: 8300000, guid: 82abe7f9ed5dd4505a4e0ac2863fd949, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_callback_compassion
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_callback_compassion
+    speakerName: Ananda
+    dialogueText: "I sense you showed the old spirit compassion. That warmth you
+      offered him \u2014 it rippled through this realm like a stone in still water.
+      Even here, kindness echoes."
+    voiceClip: {fileID: 8300000, guid: 2cfd656bae6b6423e8495350780cbc39, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_callback_neutral
+    isEnd: 0
+    conditions:
+    - rid: 1808434539632263319
+    onShowActions: []
+  - nodeId: an_callback_neutral
+    speakerName: Ananda
+    dialogueText: You listened to the old spirit with patience, neither rushing to
+      comfort nor turning away. There is wisdom in simply being present. The ghosts
+      here have forgotten what that feels like.
+    voiceClip: {fileID: 8300000, guid: 28016dce2796a408c95e6c7ee7ff39d1, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_callback_harsh
+    isEnd: 0
+    conditions:
+    - rid: 1808434539632263320
+    onShowActions: []
+  - nodeId: an_callback_harsh
+    speakerName: Ananda
+    dialogueText: "The old spirit... he told me you were sharp with him. Don't be
+      ashamed \u2014 honesty, even harsh honesty, is its own form of truth. But ask
+      yourself: was it honesty, or was it armor?"
+    voiceClip: {fileID: 8300000, guid: b92569e963c744addaa7ab01a96fcf9b, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_mechanic1
+    isEnd: 0
+    conditions:
+    - rid: 1808434539632263321
+    onShowActions: []
+  - nodeId: an_mechanic1
+    speakerName: Ananda
+    dialogueText: "This realm feeds on craving \u2014 on wanting what you cannot
+      have and clinging to what you cannot keep. The ghosts here are trapped in that
+      cycle."
+    voiceClip: {fileID: 8300000, guid: 293f7cea02ee243259f8917008d9346b, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_mechanic2
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_mechanic2
+    speakerName: Ananda
+    dialogueText: "But here's what they've forgotten: the hunger isn't the punishment.
+      It's the teacher. Every pang is asking the same question \u2014 what do you
+      truly need?"
+    voiceClip: {fileID: 8300000, guid: a09cf6c9133834a81bc12869ac7f5779, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_choice2
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_choice2
+    speakerName: Ananda
+    dialogueText: What do you think? Can suffering teach us something, or is it just...
+      suffering?
+    voiceClip: {fileID: 8300000, guid: 5615d0f0ee69648a29e83aefb24c8641, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices:
+    - choiceText: Maybe both? It hurts, but sometimes that's how we learn.
+      inputLabel: Z
+      nextNodeId: an_r2_curious
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    - choiceText: If suffering has a lesson, I want to learn it so I can help others
+        avoid it.
+      inputLabel: X
+      nextNodeId: an_r2_empathetic
+      karmaChange: 10
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263322
+    - choiceText: I don't know. I just want to get through this.
+      inputLabel: C
+      nextNodeId: an_r2_neutral
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    nextNodeId: 
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r2_curious
+    speakerName: Ananda
+    dialogueText: "Both \u2014 yes. You're learning already. The pain and the wisdom
+      are two sides of the same coin."
+    voiceClip: {fileID: 8300000, guid: aa9c99b77ee1e43c98a230e4a0fe07de, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_mechanic3
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r2_empathetic
+    speakerName: Ananda
+    dialogueText: "To learn from your own suffering so that others might suffer less
+      \u2014 that is the bodhisattva's path. You walk it more naturally than you
+      know."
+    voiceClip: {fileID: 8300000, guid: 9a5519274cba944ce8d0bbefd2be0d0f, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_mechanic3
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r2_neutral
+    speakerName: Ananda
+    dialogueText: That honesty is a start. You don't have to understand everything
+      at once. Just keep your eyes open.
+    voiceClip: {fileID: 8300000, guid: a4cf10791da6c42ee86dc9dfae8ff113, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_mechanic3
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_mechanic3
+    speakerName: Ananda
+    dialogueText: "Let me teach you something. When the noise of this realm becomes
+      too much \u2014 the cravings, the confusion \u2014 there is a way to find stillness."
+    voiceClip: {fileID: 8300000, guid: a00d13c9818ec491292a216dfa9e463f, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_humming
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_humming
+    speakerName: Ananda
+    dialogueText: "Close your eyes. Breathe. And hum \u2014 a low, steady tone. Feel
+      it in your chest. This is how you center yourself when the world pulls at you."
+    voiceClip: {fileID: 8300000, guid: 182e4974d24d445438d8b982a71d75be, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_reflection
+    isEnd: 0
+    conditions: []
+    onShowActions:
+    - rid: 1808434539632263323
+  - nodeId: an_reflection
+    speakerName: Ananda
+    dialogueText: "Good. Remember that feeling \u2014 that calm. You'll need it.
+      This realm will test you in ways you don't expect. Not with monsters, but with
+      choices."
+    voiceClip: {fileID: 8300000, guid: e9585230ac9e545ec850dd1c09fd190a, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_choice3
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_choice3
+    speakerName: Ananda
+    dialogueText: "Before you go further, tell me \u2014 when you face a difficult
+      choice, what guides you?"
+    voiceClip: {fileID: 8300000, guid: c3d16d38916564692bd138e2c81fb9a7, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices:
+    - choiceText: I try to think about what's fair for everyone.
+      inputLabel: Z
+      nextNodeId: an_r3_neutral
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    - choiceText: My heart. I feel what the right thing is, even when it's hard.
+      inputLabel: X
+      nextNodeId: an_r3_empathetic
+      karmaChange: 15
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 0
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions:
+      - rid: 1808434539632263324
+    - choiceText: I'm curious to see what happens. Every choice reveals something.
+      inputLabel: C
+      nextNodeId: an_r3_curious
+      karmaChange: 0
+      coinChange: 0
+      requiredKarmaLevel: 0
+      choiceStyle: 2
+      voiceClip: {fileID: 0}
+      conditions: []
+      actions: []
+    nextNodeId: 
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r3_neutral
+    speakerName: Ananda
+    dialogueText: "Fairness \u2014 a noble compass. But remember: what seems fair
+      on the surface may not address the deeper need. Look beyond the obvious."
+    voiceClip: {fileID: 8300000, guid: d98f657be30b84b6dbbe01ad4ebba165, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_quest_complete
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r3_empathetic
+    speakerName: Ananda
+    dialogueText: "The heart knows what the mind argues against. Trust that voice,
+      Sammy. It will not lead you astray \u2014 even when the path it shows is the
+      harder one."
+    voiceClip: {fileID: 8300000, guid: 2d654fbb99d07404c959ca832cfd1850, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_quest_complete
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_r3_curious
+    speakerName: Ananda
+    dialogueText: "A seeker! Yes \u2014 curiosity is the first step on every worthy
+      path. Just be mindful that seeking doesn't become avoiding. Sometimes you must
+      choose, not just observe."
+    voiceClip: {fileID: 8300000, guid: 6bc47700ec90b4c7a8fb47f820969cc7, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_quest_complete
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_quest_complete
+    speakerName: Ananda
+    dialogueText: You found me, just as the old spirit hoped. Your first journey
+      in this realm is complete. But the real test is only beginning.
+    voiceClip: {fileID: 8300000, guid: fcc04ec539245458396337b2efc5012a, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_bread_give
+    isEnd: 0
+    conditions: []
+    onShowActions:
+    - rid: 1808434539632263325
+    - rid: 1808434539632263326
+  - nodeId: an_bread_give
+    speakerName: Ananda
+    dialogueText: "Here \u2014 take this bread. I baked it this morning. It's warm,
+      and it will fill your belly."
+    voiceClip: {fileID: 8300000, guid: 542284db36c414170bad9e06241b2645, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_bread_explain
+    isEnd: 0
+    conditions: []
+    onShowActions:
+    - rid: 1808434539632263327
+    - rid: 1808434539632263328
+  - nodeId: an_bread_explain
+    speakerName: Ananda
+    dialogueText: "But Sammy \u2014 pay attention as you walk. You may find that
+      you aren't the hungriest person on this path. When that moment comes, listen
+      to what your heart tells you."
+    voiceClip: {fileID: 8300000, guid: fbbca22cb8e414936b7bee3f46875d18, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_player_thought1
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_player_thought1
+    speakerName: Sammy
+    dialogueText: "(The bread is warm in my hands. It smells like home \u2014 like
+      something I'd almost forgotten.)"
+    voiceClip: {fileID: 0}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_player_thought2
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_player_thought2
+    speakerName: Sammy
+    dialogueText: (Ananda said to pay attention. To notice when someone needs this
+      more than I do. I wonder what he means...)
+    voiceClip: {fileID: 0}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_quest_hunger
+    isEnd: 0
+    conditions: []
+    onShowActions: []
+  - nodeId: an_quest_hunger
+    speakerName: Ananda
+    dialogueText: "Now go. Walk the path ahead and observe \u2014 not just the world
+      around you, but the world within you. We will meet again."
+    voiceClip: {fileID: 8300000, guid: 4c990061035b64206ba74112e8f96380, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: an_final
+    isEnd: 0
+    conditions: []
+    onShowActions:
+    - rid: 1808434539632263329
+  - nodeId: an_final
+    speakerName: Ananda
+    dialogueText: "May your steps be mindful, Sammy. And remember \u2014 the humming.
+      It will bring you back to yourself when you need it most."
+    voiceClip: {fileID: 8300000, guid: 40bdb181a893747ef95af40c89080be8, type: 3}
+    nodeAnimation: {fileID: 0}
+    choices: []
+    nextNodeId: 
+    isEnd: 1
+    conditions: []
+    onShowActions: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 1808434539632263318
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: 15
+    - rid: 1808434539632263319
+      type: {class: FlagCondition, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: chose_compassion_npc1
+        expectedValue: 1
+    - rid: 1808434539632263320
+      type: {class: FlagCondition, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: chose_neutral_npc1
+        expectedValue: 1
+    - rid: 1808434539632263321
+      type: {class: FlagCondition, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: chose_harsh_npc1
+        expectedValue: 1
+    - rid: 1808434539632263322
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: 10
+    - rid: 1808434539632263323
+      type: {class: SetFlagAction, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: humming_unlocked
+        value: 1
+    - rid: 1808434539632263324
+      type: {class: ModifyKarmaAction, ns: , asm: Assembly-CSharp}
+      data:
+        amount: 15
+    - rid: 1808434539632263325
+      type: {class: CompleteQuestAction, ns: , asm: Assembly-CSharp}
+      data:
+        questId: Q1_find_ananda
+    - rid: 1808434539632263326
+      type: {class: StartQuestAction, ns: , asm: Assembly-CSharp}
+      data:
+        questId: Q2_observe_self
+    - rid: 1808434539632263327
+      type: {class: GiveItemAction, ns: , asm: Assembly-CSharp}
+      data:
+        item: {fileID: 11400000, guid: beb962878f6e34164937a10a2b370427, type: 2}
+    - rid: 1808434539632263328
+      type: {class: SetFlagAction, ns: , asm: Assembly-CSharp}
+      data:
+        flagName: ananda_test_started
+        value: 1
+    - rid: 1808434539632263329
+      type: {class: StartQuestAction, ns: , asm: Assembly-CSharp}
+      data:
+        questId: Q3_hunger_test
