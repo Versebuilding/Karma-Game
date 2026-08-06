@@ -108,7 +108,7 @@ public class ThrowManager : MonoBehaviour
             obj = Instantiate(sourceObject, transform);
         }
 
-        obj.GetComponent<Rigidbody>().isKinematic = true;
+		obj.DeactivateProjectile();
 
         obj.Reset.AddListener(() => ResetThrowObject(reset_index));
 
@@ -125,8 +125,7 @@ public class ThrowManager : MonoBehaviour
             projectile = (Projectile)projectiles.GetValue(nextIndex);
         }
 
-        projectile.Physicsbody.isKinematic = false;
-        projectile.Physicsbody.linearVelocity = GetThrowVelocity();
+        projectile.ActivateProjectile(GetThrowVelocity());
     }
 
     /// <returns>
@@ -197,10 +196,8 @@ public class ThrowManager : MonoBehaviour
 
         // Reset permanent objects
         Projectile projectile = (Projectile)projectiles.GetValue(index);
-
-        projectile.Physicsbody.linearVelocity = Vector3.zero;
-        projectile.Physicsbody.isKinematic = true;
         
+        projectile.DeactivateProjectile();
         projectile.transform.position = new Vector3(index * 2, 5, -15);// FIX: remove magic numbers/functionalize
 
         activeFlag ^= 1 << index;

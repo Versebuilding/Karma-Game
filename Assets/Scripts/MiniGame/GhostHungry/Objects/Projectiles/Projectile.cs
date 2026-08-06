@@ -8,16 +8,26 @@ public abstract class Projectile : MonoBehaviour
 {
     public UnityEvent Reset = new UnityEvent();
 
-    public Rigidbody Physicsbody { get; private set; }
+	private Rigidbody physicsbody;
 
     void Awake() {
-        Physicsbody = GetComponent<Rigidbody>();
+        physicsbody = GetComponent<Rigidbody>();
     }
 
     void Update() {
-        if (!Physicsbody.isKinematic && ResetConditionsMet()) {
+        if (!physicsbody.isKinematic && ResetConditionsMet()) {
             Reset.Invoke();
         }
+    }
+
+	public void ActivateProjectile(Vector3 velocity) {
+		physicsbody.isKinematic = false;
+		physicsbody.linearVelocity = velocity;
+	}
+
+	public void DeactivateProjectile() {
+		physicsbody.linearVelocity = Vector3.zero;
+		physicsbody.isKinematic = true;
     }
 
     protected abstract bool ResetConditionsMet();
