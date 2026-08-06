@@ -18,7 +18,7 @@ public class PhaseManager : MonoBehaviour {
 	/// Indicates that a <see cref="PhaseManager"/> instance has transitioned to a new phase
 	/// </summary>
     /// <remarks><b>Note:</b> Exists on startup and persists</remarks>
-	public static UnityEvent<PhaseSO> PhaseChange = new();
+	public static readonly UnityEvent<PhaseSO> PhaseChange = new();
 
 
     // VARIABLES:
@@ -91,9 +91,7 @@ public class PhaseManager : MonoBehaviour {
 
     // Initialize the phase & signal its change
     private void StartPhase() {
-        if (PhaseChange != null) {
             PhaseChange.Invoke(phases[currentPhaseIndex]);
-        }
 
         phaseTimer = phases[currentPhaseIndex].PhaseDuration;
     }
