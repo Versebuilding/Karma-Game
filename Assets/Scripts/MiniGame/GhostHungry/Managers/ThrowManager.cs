@@ -52,6 +52,9 @@ public class ThrowManager : MonoBehaviour
 
     void Awake() {
 		if (ThrowRegistered == null) ThrowRegistered = new();
+		if (!storageFolder) {
+			storageFolder = transform;
+		}
 
         chargeTimer = chargeDuration;
 
@@ -99,14 +102,8 @@ public class ThrowManager : MonoBehaviour
     }
 
     private Projectile CreateObject(int reset_index) {
-        Projectile obj;
+		Projectile obj = Instantiate(sourceObject, storageFolder);
 
-        if (storageFolder) {
-            obj = Instantiate(sourceObject, storageFolder.transform);
-        }
-        else {
-            obj = Instantiate(sourceObject, transform);
-        }
 
 		obj.DeactivateProjectile();
 
