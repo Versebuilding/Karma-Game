@@ -18,7 +18,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class ThrowManager : MonoBehaviour
 {
-    public UnityEvent ThrowRegistered = new();
+    public UnityEvent ThrowRegistered;
 
     [Header("References")]
     [Tooltip("The object, of type Projectile, which is instantiated for throwing")]
@@ -51,6 +51,8 @@ public class ThrowManager : MonoBehaviour
     private float cooldownTimer;
 
     void Awake() {
+		if (ThrowRegistered == null) ThrowRegistered = new();
+
         chargeTimer = chargeDuration;
 
         projectiles = Array.CreateInstance(typeof(Projectile), objectCount);
