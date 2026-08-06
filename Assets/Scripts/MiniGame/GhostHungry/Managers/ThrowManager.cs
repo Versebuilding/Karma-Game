@@ -42,7 +42,7 @@ public class ThrowManager : MonoBehaviour
     [SerializeField][Min(0f)] private float throwCooldown = 2f; // FIX: needs to match animation
 
     // Projectile Properties:
-    private Array projectiles;
+    private Array base_projectiles;
     private int activeFlag = 1;
     private int nextIndex = 0;
 
@@ -57,18 +57,17 @@ public class ThrowManager : MonoBehaviour
 		}
 
         chargeTimer = chargeDuration;
-
-        projectiles = Array.CreateInstance(typeof(Projectile), objectCount);
+        base_projectiles = Array.CreateInstance(typeof(Projectile), objectCount);
     }
 
     void Start() {
         Cursor.lockState = CursorLockMode.Confined; // FIX: Move to Minigame Manager
         Cursor.visible = false; // FIX: Move to Minigame Manager
 
-        for (int i = 0; i < projectiles.Length; i++) {
-            projectiles.SetValue(CreateObject(i), i);
+        for (int i = 0; i < base_projectiles.Length; i++) {
+            base_projectiles.SetValue(CreateObject(i), i);
 
-            ((Projectile)projectiles.GetValue(i)).transform.position = new Vector3(i * 2, 5, -15);// FIX: remove magic numbers/functionalize
+            ((Projectile)base_projectiles.GetValue(i)).transform.position = new Vector3(i * 2, 5, -15);// FIX: remove magic numbers/functionalize
         }
 
         MoveObjectToReload();
@@ -102,14 +101,12 @@ public class ThrowManager : MonoBehaviour
     }
 
     private Projectile CreateObject(int reset_index) {
-		Projectile obj = Instantiate(sourceObject, storageFolder);
+		Projectile projectile = Instantiate(sourceObject, storageFolder);
 
+		projectile.DeactivateProjectile();
+		projectile.Reset.AddListener(() => ResetThrowObject(reset_index));
 
-		obj.DeactivateProjectile();
-
-        obj.Reset.AddListener(() => ResetThrowObject(reset_index));
-
-        return obj;
+		return projectile;
     }
 
     private void Throw() {
@@ -119,7 +116,7 @@ public class ThrowManager : MonoBehaviour
             projectile = (Projectile)storageFolder.GetChild(nextIndex).GetComponent(typeof(Projectile));
         }
         else {
-            projectile = (Projectile)projectiles.GetValue(nextIndex);
+            projectile = (Projectile)base_projectiles.GetValue(nextIndex);
         }
 
         projectile.ActivateProjectile(GetThrowVelocity());
@@ -176,7 +173,7 @@ public class ThrowManager : MonoBehaviour
             return;
         }
         
-        ((Projectile)projectiles.GetValue(nextIndex)).transform.position = throwOrigin.position;
+        ((Projectile)base_projectiles.GetValue(nextIndex)).transform.position = throwOrigin.position;
     }
 
 	/// <summary>
@@ -192,7 +189,7 @@ public class ThrowManager : MonoBehaviour
         }
 
         // Reset permanent objects
-        Projectile projectile = (Projectile)projectiles.GetValue(index);
+        Projectile projectile = (Projectile)base_projectiles.GetValue(index);
         
         projectile.DeactivateProjectile();
         projectile.transform.position = new Vector3(index * 2, 5, -15);// FIX: remove magic numbers/functionalize
