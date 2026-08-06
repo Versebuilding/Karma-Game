@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxConcurrentOpens: 0
   openDuration: 3
-  closedDuration: 6
+  closedDuration: 4
   rhythmVariance: 0.05
   fakeoutChance: 0
   fakeoutDuration: 0.15

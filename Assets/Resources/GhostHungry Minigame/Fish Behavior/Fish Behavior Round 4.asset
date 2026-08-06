@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Fish Behavior Round 4
   m_EditorClassIdentifier: 
   maxConcurrentOpens: 0
-  openDuration: 1.5
+  openDuration: 2.5
   closedDuration: 2.5
   rhythmVariance: 0.2
   fakeoutChance: 0.2

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -18,7 +19,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class ThrowManager : MonoBehaviour
 {
-    public UnityEvent ThrowRegistered = new();
+    public UnityEvent ThrowRegistered;
 
     [Header("References")]
     [Tooltip("The object, of type Projectile, which is instantiated for throwing")]
@@ -42,28 +43,34 @@ public class ThrowManager : MonoBehaviour
     [SerializeField][Min(0f)] private float throwCooldown = 2f; // FIX: needs to match animation
 
     // Projectile Properties:
-    private Array projectiles;
-    private int activeFlag = 1;
+    private Array base_projectiles;
+	private List<Projectile> auxiliary_projectiles = new();
+	private int activeFlag = 1;
     private int nextIndex = 0;
+	private int num_aux_elements = 0;
 
-    // Action Timers:
-    private float chargeTimer;
+	// Action Timers:
+	private float chargeTimer;
     private float cooldownTimer;
 
-    void Awake() {
-        chargeTimer = chargeDuration;
+	void Awake() {
+		if (ThrowRegistered == null) ThrowRegistered = new();
+		if (!storageFolder) {
+			storageFolder = transform;
+		}
 
-        projectiles = Array.CreateInstance(typeof(Projectile), objectCount);
+		chargeTimer = chargeDuration;
+        base_projectiles = Array.CreateInstance(typeof(Projectile), objectCount);
     }
 
     void Start() {
         Cursor.lockState = CursorLockMode.Confined; // FIX: Move to Minigame Manager
         Cursor.visible = false; // FIX: Move to Minigame Manager
 
-        for (int i = 0; i < projectiles.Length; i++) {
-            projectiles.SetValue(CreateObject(i), i);
+        for (int i = 0; i < base_projectiles.Length; i++) {
+            base_projectiles.SetValue(CreateObject(i), i);
 
-            ((Projectile)projectiles.GetValue(i)).transform.position = new Vector3(i * 2, 5, -15);// FIX: remove magic numbers/functionalize
+            ((Projectile)base_projectiles.GetValue(i)).transform.position = new Vector3(i * 2, 5, -15);// FIX: remove magic numbers/functionalize
         }
 
         MoveObjectToReload();
@@ -74,7 +81,7 @@ public class ThrowManager : MonoBehaviour
     void Update() {
         /* Control Structure: only one can occur per tick
         1. On Cooldown? -> tick cooldown
-        2. Throw Registered? -> throw > signal such > reset state > create reload wait 
+        2. Throw Registered? -> throw > signal such > reset state > create reload wait
         3. Charging? -> tick & clamp charge
         */
 
@@ -97,34 +104,25 @@ public class ThrowManager : MonoBehaviour
     }
 
     private Projectile CreateObject(int reset_index) {
-        Projectile obj;
+		Projectile projectile = Instantiate(sourceObject, storageFolder);
 
-        if (storageFolder) {
-            obj = Instantiate(sourceObject, storageFolder.transform);
-        }
-        else {
-            obj = Instantiate(sourceObject, transform);
-        }
+		projectile.DeactivateProjectile();
+		projectile.Reset.AddListener(() => ResetThrowObject(reset_index));
 
-        obj.GetComponent<Rigidbody>().isKinematic = true;
-
-        obj.Reset.AddListener(() => ResetThrowObject(reset_index));
-
-        return obj;
+		return projectile;
     }
 
     private void Throw() {
         Projectile projectile;
 
         if (nextIndex >= objectCount) {
-            projectile = (Projectile)storageFolder.GetChild(nextIndex).GetComponent(typeof(Projectile));
-        }
+			projectile = auxiliary_projectiles[nextIndex - objectCount];
+		}
         else {
-            projectile = (Projectile)projectiles.GetValue(nextIndex);
+            projectile = (Projectile)base_projectiles.GetValue(nextIndex);
         }
 
-        projectile.Physicsbody.isKinematic = false;
-        projectile.Physicsbody.linearVelocity = GetThrowVelocity();
+        projectile.ActivateProjectile(GetThrowVelocity());
     }
 
     /// <returns>
@@ -147,13 +145,28 @@ public class ThrowManager : MonoBehaviour
 
     private void Reload() {
         // Fail State: All objects active, create a temporary object
-        if (activeFlag == ((1 << objectCount) - 1)) {
-            nextIndex = storageFolder.childCount;
+        if (activeFlag == ((1 << objectCount) - 1)) { // FIX: try to optimize
+			nextIndex = objectCount + auxiliary_projectiles.Count;
 
-            CreateObject(nextIndex);
-            MoveObjectToReload();
+			for (int i = 0; i < auxiliary_projectiles.Count; i++) {
+				if (!auxiliary_projectiles[i]) {
+					nextIndex = objectCount + i;
 
-            return;
+					auxiliary_projectiles[i] = CreateObject(nextIndex);
+                    num_aux_elements++;
+
+					MoveObjectToReload();
+
+					return;
+				}
+			}
+
+			auxiliary_projectiles.Add(CreateObject(nextIndex));
+			num_aux_elements++;
+
+			MoveObjectToReload();
+
+			return;
         }
 
         // Get the next viable non-active index
@@ -173,32 +186,37 @@ public class ThrowManager : MonoBehaviour
 
     private void MoveObjectToReload() {
         if (nextIndex >= objectCount) {
-            storageFolder.GetChild(nextIndex).transform.position = throwOrigin.position;
+			auxiliary_projectiles[nextIndex - objectCount].transform.position = throwOrigin.position;
 
             return;
         }
         
-        ((Projectile)projectiles.GetValue(nextIndex)).transform.position = throwOrigin.position;
+        ((Projectile)base_projectiles.GetValue(nextIndex)).transform.position = throwOrigin.position;
     }
 
 	/// <summary>
 	/// Reintroduce the <see cref="Projectile"/> object at <paramref name="index"/> into the available object pool or destroy it if its a temp object
 	/// </summary>
 	/// <param name="index">The referencing index for the object, which child of <see cref="storageFolder"/> is being reset</param>
-    public void ResetThrowObject(int index) {
+	public void ResetThrowObject(int index) {
         // Destroy temporary objects
         if (index >= objectCount) {
-             Destroy(storageFolder.GetChild(index).gameObject); // FIX: multi-instantiation will fail after this due to indexing issues - reindex children
+			index -= objectCount;
 
-            return;
+			Destroy(auxiliary_projectiles[index].gameObject);
+            auxiliary_projectiles[index] = null;
+
+			if (--num_aux_elements == 0) {
+				auxiliary_projectiles.Clear();
+			}
+
+			return;
         }
 
         // Reset permanent objects
-        Projectile projectile = (Projectile)projectiles.GetValue(index);
+        Projectile projectile = (Projectile)base_projectiles.GetValue(index);
 
-        projectile.Physicsbody.linearVelocity = Vector3.zero;
-        projectile.Physicsbody.isKinematic = true;
-        
+        projectile.DeactivateProjectile();
         projectile.transform.position = new Vector3(index * 2, 5, -15);// FIX: remove magic numbers/functionalize
 
         activeFlag ^= 1 << index;

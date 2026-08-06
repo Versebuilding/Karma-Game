@@ -51,6 +51,8 @@ public class FeedingMiniGameManager : MonoBehaviour
     private readonly List<BreadProjectile> activeProjectiles = new List<BreadProjectile>();
     private readonly List<BirdSwarmMovement> legacySwarmBirds = new List<BirdSwarmMovement>();
 
+    private PhaseManager phaseManager;
+
     public int CurrentScore => currentScore;
     public int SuccessfulFeeds => successfulFeeds;
     public int FailedFeeds => failedFeeds;
@@ -357,6 +359,10 @@ public class FeedingMiniGameManager : MonoBehaviour
             lastFeedbackMessage = "Time up.";
         }
 
+        if (!completedRound && phaseManager != null) {
+            phaseManager.JumpPhase(phaseManager.CurrentPhaseIndex);
+        }
+
         ClearActiveProjectiles();
     }
 
@@ -375,6 +381,10 @@ public class FeedingMiniGameManager : MonoBehaviour
         }
 
         ApplyPattern(currentPatternIndex + 1, true);
+
+        if (phaseManager != null) {
+            phaseManager.JumpPhase(phaseManager.CurrentPhaseIndex + 1);
+        }
     }
 
     private void ApplyPattern(int patternIndex, bool restartRound)
@@ -551,6 +561,10 @@ public class FeedingMiniGameManager : MonoBehaviour
         if (birdPatternGroup == null)
         {
             birdPatternGroup = FindFirstObjectByType<BirdPatternGroupController>();
+        }
+
+        if (phaseManager == null) {
+            phaseManager = FindFirstObjectByType<PhaseManager>();
         }
     }
 

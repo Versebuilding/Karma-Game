@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7799955c1f623a4faf5c745f09d49da, type: 3}
   m_Name: Fish Phase 1
   m_EditorClassIdentifier: 
-  phaseDuration: 30
+  phaseDuration: 40
   phaseArguments:
   - {fileID: 11400000, guid: 70515bb05f1088645a22b95955752f75, type: 2}
   objectData:
