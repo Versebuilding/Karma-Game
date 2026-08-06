@@ -5,7 +5,7 @@ using UnityEngine;
 /// The base <see langword="class"/> for all phase types utilized by the <see cref="PhaseManager"/>. It defines a single,
 /// basic game phase without any additional inherent functionality.
 /// </summary>
-[CreateAssetMenu(fileName = "NewPhaseSO", menuName = "Karma/Phase/Phase SO", order = 2)]
+[CreateAssetMenu(fileName = "NewPhaseSO", menuName = "Karma/Phase/Phase SO", order = 0)]
 public class PhaseSO : ScriptableObject {
     [Tooltip("Duration of this phase in seconds (minimum 0.01).")]
     [SerializeField][Min(0.01f)] private float phaseDuration = 30f;

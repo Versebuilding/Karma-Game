@@ -36,7 +36,7 @@ public class PhaseManager : MonoBehaviour {
 	/// <summary>
 	/// Is this <see cref="PhaseManager"/> instance currently running/updating?
 	/// </summary>
-    public bool IsActive => isActive;
+	public bool IsActive => isActive;
 	/// <summary>
 	/// A read-only sequence for the linear progression that this <see cref="PhaseManager"/> instance will experience in terms of its set phases
 	/// </summary>
@@ -44,12 +44,12 @@ public class PhaseManager : MonoBehaviour {
 	/// <summary>
 	/// The index of the currently set phase as it appears in <see cref="phases"/>
 	/// </summary>
-    public int CurrentPhaseIndex => currentPhaseIndex;
+	public int CurrentPhaseIndex => currentPhaseIndex;
 	/// <summary>
 	/// The time left in the currently set phase
 	/// </summary>
-    public float PhaseTimer => phaseTimer;
-    
+	public float PhaseTimer => phaseTimer;
+
 
     // Unity System Processing:
     private void Start() { // FIX: Move to Awake and OnEnable
@@ -91,7 +91,7 @@ public class PhaseManager : MonoBehaviour {
 
     // Initialize the phase & signal its change
     private void StartPhase() {
-            PhaseChange.Invoke(phases[currentPhaseIndex]);
+        PhaseChange.Invoke(phases[currentPhaseIndex]);
 
         phaseTimer = phases[currentPhaseIndex].PhaseDuration;
     }
@@ -122,7 +122,7 @@ public class PhaseManager : MonoBehaviour {
 	/// </remarks>
 	/// <param name="index">The index of the <see cref="phases"/> phase to jump to : <c>[0, <see cref="phases"/>.Count)</c></param>
 	/// <returns>If the jump was successful</returns>
-    public bool JumpPhase(int index) {
+	public bool JumpPhase(int index) {
         if (index < 0 || index >= phases.Count) return false;
 
         currentPhaseIndex = index;
@@ -135,7 +135,7 @@ public class PhaseManager : MonoBehaviour {
 
 #if UNITY_EDITOR
     // Editor-Time Validation:
-    void OnValidate() {
+    private void OnValidate() {
         if (phases.Count == 0) {
             Debug.LogWarning($"{GetType()} '{name}': No phases configured. Add {typeof(PhaseSO)} assets to the '{nameof(phases)}' list or the {GetType()} will deactivate on startup...");
         }
