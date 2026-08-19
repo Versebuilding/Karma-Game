@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -7,6 +8,18 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewItem", menuName = "Karma/Item", order = 3)]
 public class ItemSO : ScriptableObject
 {
+	// Unique Identifier
+    [SerializeField][HideInInspector] string uid = Guid.NewGuid().ToString();
+	/// <summary>
+	/// Internal unique identifier for this asset
+	/// </summary>
+	/// <remarks>
+	/// - Set on creation/compilation and constant after<br/>
+	/// - Stable across runtime
+	/// </remarks>
+	public string UID => uid;
+
+
     [Header("Item Info")]
     [Tooltip("Display name shown in inventory")]
     public string itemName;
