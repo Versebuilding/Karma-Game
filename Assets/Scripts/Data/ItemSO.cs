@@ -25,11 +25,6 @@ public class ItemSO : ScriptableObject
     [Tooltip("Category of this item")]
     public ItemCategory category = ItemCategory.Collectible;
 
-    [Tooltip("If true, this item is needed for a quest objective")]
-    public bool isQuestItem;
-
-    [Tooltip("Quest ID this item belongs to (if quest item)")]
-    public string questId;
 
     [Header("Karma / Value")]
     [Tooltip("Karma awarded when this item is collected")]
@@ -40,6 +35,11 @@ public class ItemSO : ScriptableObject
 
     [Tooltip("Flavor text shown below description (earned in chapter X quest Y)")]
     public string flavorText;
+
+
+	// DEP // FIX: remove this stuff from the greater codebase (is currently being used in dialog system)
+	public bool isQuestItem;
+    public string questId;
 }
 
 /// <summary>
@@ -47,9 +47,8 @@ public class ItemSO : ScriptableObject
 /// </summary>
 public enum ItemCategory
 {
-    Collectible,     // General items (heart, scarf, backpack from mockup)
-    QuestItem,       // Items needed for quests (bread, fish)
-    ReflectionCard,  // Wisdom cards (one per chapter)
-    KeyItem,         // Story-critical items
-    Consumable       // Items that can be used
+    Collectible,    // General items (heart, scarf, backpack from mockup)
+	QuestItem,      // Items needed for quests (bread, fish)
+	KeyItem,        // Story-critical items
+	Consumable      // Items that can be used
 }
