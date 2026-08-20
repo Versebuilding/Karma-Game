@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// Simple singleton inventory manager. Holds ItemSO references at runtime.
@@ -11,18 +12,34 @@ using UnityEngine;
 public class InventoryManager : MonoBehaviour
 {
     // ─── Singleton ──────────────────────────────────────────────
-    public static InventoryManager Instance { get; private set; }
+    [HideInInspector] public static InventoryManager Instance { get; private set; }
+
+	// ─── Events ─────────────────────────────────────────────────
+	public UnityEvent<ItemSO> OnInventoryAdd;
+	public UnityEvent<ItemSO> OnInventoryRemove;
 
     // ─── Runtime State ──────────────────────────────────────────
     private List<ItemSO> items = new List<ItemSO>();
+	// ─── Unity Lifecycle ────────────────────────────────────────
 
-    // ─── Events ─────────────────────────────────────────────────
+	private void Awake() {
+		if (Instance != null && Instance != this) {
+			Debug.LogWarning("InventoryManager: Duplicate instance destroyed.");
+			Destroy(gameObject);
+			return;
+		}
 
-    /// <summary>Fired when an item is added. Arg: the item.</summary>
-    public event Action<ItemSO> OnItemAdded;
+		Instance = this;
+		DontDestroyOnLoad(gameObject);
 
-    /// <summary>Fired when an item is removed. Arg: the item.</summary>
-    public event Action<ItemSO> OnItemRemoved;
+		if (OnInventoryAdd == null) OnInventoryAdd = new();
+		if (OnInventoryRemove == null) OnInventoryRemove = new();
+	}
+
+	private void OnDestroy() {
+		if (Instance == this) Instance = null;
+	}
+
 
     // ─── Public API ─────────────────────────────────────────────
 
@@ -32,7 +49,7 @@ public class InventoryManager : MonoBehaviour
         if (item == null) return;
 
         items.Add(item);
-        OnItemAdded?.Invoke(item);
+		OnInventoryAdd.Invoke(item);
 
         // Sync flag to VariableStore for dialogue conditions
         if (VariableStore.Instance != null && !string.IsNullOrEmpty(item.itemName))
@@ -52,7 +69,7 @@ public class InventoryManager : MonoBehaviour
         bool removed = items.Remove(item);
         if (removed)
         {
-            OnItemRemoved?.Invoke(item);
+		OnInventoryRemove.Invoke(item);
 
             // Clear flag if no more of this item remain
             if (!HasItem(item.itemName) && VariableStore.Instance != null)
@@ -78,44 +95,15 @@ public class InventoryManager : MonoBehaviour
         return false;
     }
 
-    /// <summary>Get all items in the inventory.</summary>
-    public List<ItemSO> GetItems() => new List<ItemSO>(items);
+	
+	
+	
 
-    /// <summary>Get the count of a specific item by name.</summary>
-    public int GetItemCount(string itemName)
-    {
-        int count = 0;
-        for (int i = 0; i < items.Count; i++)
-        {
-            if (items[i] != null && items[i].itemName == itemName)
-                count++;
-        }
-        return count;
-    }
-
-    /// <summary>Clear all items (for game reset).</summary>
-    public void ClearItems()
-    {
+	/// <summary>Clear all items (for game reset).</summary>
+	public void ClearInventory() {
         items.Clear();
         Debug.Log("InventoryManager: All items cleared.");
     }
 
-    // ─── Unity Lifecycle ────────────────────────────────────────
 
-    void Awake()
-    {
-        if (Instance != null && Instance != this)
-        {
-            Debug.LogWarning("InventoryManager: Duplicate instance destroyed.");
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
-
-    void OnDestroy()
-    {
-        if (Instance == this) Instance = null;
-    }
 }

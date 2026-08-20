@@ -58,7 +58,7 @@ public class ResetGameButton : MonoBehaviour
         // Clear inventory
         if (InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.ClearItems();
+            InventoryManager.Instance.ClearInventory();
             Debug.Log("  Inventory → cleared");
         }
 

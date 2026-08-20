@@ -31,8 +31,6 @@ public class ItemSO : ScriptableObject
     [Tooltip("Item icon for inventory grid")]
     public Sprite icon;
 
-    [Tooltip("Larger item image for detail panel")]
-    public Sprite detailImage;
 
     [Header("Item Type")]
     [Tooltip("Category of this item")]
