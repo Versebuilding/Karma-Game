@@ -6,7 +6,6 @@ using UnityEngine.InputSystem;
 
 /* Implement
 - Charge Locking
-- List-Based Indexing
 - Don't like how aiming feels - needs refactoring
 */
 
@@ -19,7 +18,10 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class ThrowManager : MonoBehaviour
 {
-    public UnityEvent ThrowRegistered;
+	/// <summary>
+	/// Indicates that a <see cref="Projectile"/> instance has be thrown and is now part of the physics simulation
+	/// </summary>
+	public UnityEvent ThrowRegistered;
 
     [Header("References")]
     [Tooltip("The object, of type Projectile, which is instantiated for throwing")]
@@ -43,7 +45,7 @@ public class ThrowManager : MonoBehaviour
     [SerializeField][Min(0f)] private float throwCooldown = 2f; // FIX: needs to match animation
 
     // Projectile Properties:
-    private Array base_projectiles;
+    private Projectile[] base_projectiles;
 	private List<Projectile> auxiliary_projectiles = new();
 	private int activeFlag = 1;
     private int nextIndex = 0;
@@ -60,17 +62,17 @@ public class ThrowManager : MonoBehaviour
 		}
 
 		chargeTimer = chargeDuration;
-        base_projectiles = Array.CreateInstance(typeof(Projectile), objectCount);
-    }
+        base_projectiles = new Projectile[objectCount];
+	}
 
     void Start() {
         Cursor.lockState = CursorLockMode.Confined; // FIX: Move to Minigame Manager
         Cursor.visible = false; // FIX: Move to Minigame Manager
 
         for (int i = 0; i < base_projectiles.Length; i++) {
-            base_projectiles.SetValue(CreateObject(i), i);
+            base_projectiles[i] = CreateObject(i);
 
-            ((Projectile)base_projectiles.GetValue(i)).transform.position = new Vector3(i * 2, 5, -15);// FIX: remove magic numbers/functionalize
+            base_projectiles[i].transform.position = new Vector3(i * 2, 5, -15);// FIX: remove magic numbers/functionalize
         }
 
         MoveObjectToReload();
@@ -119,7 +121,7 @@ public class ThrowManager : MonoBehaviour
 			projectile = auxiliary_projectiles[nextIndex - objectCount];
 		}
         else {
-            projectile = (Projectile)base_projectiles.GetValue(nextIndex);
+            projectile = base_projectiles[nextIndex];
         }
 
         projectile.ActivateProjectile(GetThrowVelocity());
@@ -191,7 +193,7 @@ public class ThrowManager : MonoBehaviour
             return;
         }
         
-        ((Projectile)base_projectiles.GetValue(nextIndex)).transform.position = throwOrigin.position;
+        base_projectiles[nextIndex].transform.position = throwOrigin.position;
     }
 
 	/// <summary>
@@ -214,7 +216,7 @@ public class ThrowManager : MonoBehaviour
         }
 
         // Reset permanent objects
-        Projectile projectile = (Projectile)base_projectiles.GetValue(index);
+        Projectile projectile = base_projectiles[index];
 
         projectile.DeactivateProjectile();
         projectile.transform.position = new Vector3(index * 2, 5, -15);// FIX: remove magic numbers/functionalize

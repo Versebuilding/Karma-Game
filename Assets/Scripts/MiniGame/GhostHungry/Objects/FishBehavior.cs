@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Events;
 
 // FIX: make modular, separate feedable and cycle behavior
+// FIX?: move animation to its own script
 
 /* Implement:
 - Phase 3 : "Some open only if ignored" - (scalar += delta/factor)
@@ -42,13 +43,14 @@ public class FishBehavior : MonoBehaviour, IFeedableBehavior, ISpawnInitializabl
     [SerializeField] private FishBehaviorDataSO fishData = null;
     [Tooltip("When true, this fish will automatically cycle between closed and open states")]
     [SerializeField] private bool autoCycle = true;
+	[Tooltip("")] // FIX: add tooltip
 	[SerializeField] private Animator animator; // FIX: add validation
 
-    // Events:
-    /// <summary>
-    /// Invoked when a fish's mouth opens
-    /// </summary>
-    [Tooltip("Invoked when the mouth opens")]
+	// Events:
+	/// <summary>
+	/// Invoked when a fish's mouth opens
+	/// </summary>
+	[Tooltip("Invoked when the mouth opens")]
     public UnityEvent OnOpen;
     /// <summary>
     /// Invoked when a fish's mouth closes
@@ -105,7 +107,7 @@ public class FishBehavior : MonoBehaviour, IFeedableBehavior, ISpawnInitializabl
         Open();
         yield return new WaitForSeconds(duration);
         Close();
-    }
+	}
 
     // State Changers:
     private void Open() {
@@ -115,8 +117,8 @@ public class FishBehavior : MonoBehaviour, IFeedableBehavior, ISpawnInitializabl
         CurrentOpenCount++;
 
 		animator.SetTrigger("Open");
-        OnOpen.Invoke();
-    }
+		OnOpen.Invoke();
+	}
     
     private void Close(bool signal = true) {
         if (!IsFeedable) return;
@@ -126,8 +128,8 @@ public class FishBehavior : MonoBehaviour, IFeedableBehavior, ISpawnInitializabl
 
         if (signal) {
 			animator.SetTrigger("Close");
-        OnClose.Invoke();
-    }
+			OnClose.Invoke();
+		}
     }
 
     // Event Manipulation:
@@ -135,7 +137,7 @@ public class FishBehavior : MonoBehaviour, IFeedableBehavior, ISpawnInitializabl
         FedValue += value;
 
 		animator.SetTrigger("Fed");
-        OnFed.Invoke();
+		OnFed.Invoke();
 
         Close(signal: false);
     }
