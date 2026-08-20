@@ -42,6 +42,7 @@ public class FishBehavior : MonoBehaviour, IFeedableBehavior, ISpawnInitializabl
     [SerializeField] private FishBehaviorDataSO fishData = null;
     [Tooltip("When true, this fish will automatically cycle between closed and open states")]
     [SerializeField] private bool autoCycle = true;
+	[SerializeField] private Animator animator; // FIX: add validation
 
     // Events:
     /// <summary>
@@ -113,25 +114,30 @@ public class FishBehavior : MonoBehaviour, IFeedableBehavior, ISpawnInitializabl
         IsFeedable = true;
         CurrentOpenCount++;
 
+		animator.SetTrigger("Open");
         OnOpen.Invoke();
     }
     
-    private void Close() {
+    private void Close(bool signal = true) {
         if (!IsFeedable) return;
 
         IsFeedable = false;
         CurrentOpenCount--;
 
+        if (signal) {
+			animator.SetTrigger("Close");
         OnClose.Invoke();
+    }
     }
 
     // Event Manipulation:
     public void Feed(int value = 1) {
         FedValue += value;
 
+		animator.SetTrigger("Fed");
         OnFed.Invoke();
 
-        Close();
+        Close(signal: false);
     }
 
     // Utilities:
