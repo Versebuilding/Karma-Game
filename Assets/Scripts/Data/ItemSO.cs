@@ -1,55 +1,87 @@
+using System;
 using UnityEngine;
 
+// FIX: restrict write access
+
 /// <summary>
-/// Item definition ScriptableObject. Create via: Right-click > Create > Karma > Item.
-/// Used for inventory items, quest items, collectibles, and reflection cards.
+/// Describes an item which can be acquired and stored in the inventory as a consumable, quest item, or collectible
 /// </summary>
 [CreateAssetMenu(fileName = "NewItem", menuName = "Karma/Item", order = 3)]
 public class ItemSO : ScriptableObject
 {
-    [Header("Item Info")]
+	// Unique Identifier
+    [SerializeField][HideInInspector] string uid = Guid.NewGuid().ToString();
+	/// <summary>
+	/// Internal unique identifier for this asset
+	/// </summary>
+	/// <remarks>
+	/// - Set on creation/compilation and constant after<br/>
+	/// - Stable across runtime
+	/// </remarks>
+	public string UID => uid;
+
+
+	[Header("Item Info")]
     [Tooltip("Display name shown in inventory")]
-    public string itemName;
+	/// <summary>
+	/// Display name shown to the player.
+	/// </summary>
+	public string itemName;
 
     [Tooltip("Description shown when item is selected in inventory")]
     [TextArea(2, 4)]
-    public string description;
+	/// <summary>
+	/// Longer description / details about the item.
+	/// </summary>
+	public string description;
 
-    [Tooltip("Item icon for inventory grid")]
-    public Sprite icon;
+    [Tooltip("Item icon used for inventory UI")]
+	/// <summary>
+	/// Sprite used for inventory UI
+	/// </summary>
+	public Sprite icon;
 
-    [Tooltip("Larger item image for detail panel")]
-    public Sprite detailImage;
 
     [Header("Item Type")]
     [Tooltip("Category of this item")]
-    public ItemCategory category = ItemCategory.Collectible;
+	/// <summary>
+	/// Item category used by systems that filter or handle behavior per-category
+	/// </summary>
+	public ItemCategory category = ItemCategory.Collectible;
 
-    [Tooltip("If true, this item is needed for a quest objective")]
-    public bool isQuestItem;
-
-    [Tooltip("Quest ID this item belongs to (if quest item)")]
-    public string questId;
 
     [Header("Karma / Value")]
     [Tooltip("Karma awarded when this item is collected")]
-    public int karmaOnCollect;
+	/// <summary>
+	/// Amount of karma to award on collection
+	/// </summary>
+	public int karmaOnCollect;
 
     [Tooltip("Coin value of this item")]
-    public int coinValue;
+	/// <summary>
+	/// In-game currency value of the item
+	/// </summary>
+	public int coinValue;
 
     [Tooltip("Flavor text shown below description (earned in chapter X quest Y)")]
-    public string flavorText;
+	/// <summary>
+	/// Optional flavor text
+	/// </summary>
+	public string flavorText;
+
+
+	// DEP // FIX: remove this stuff from the greater codebase (is currently being used in dialog system)
+	public bool isQuestItem;
+    public string questId;
 }
 
 /// <summary>
 /// Categories for inventory items.
 /// </summary>
-public enum ItemCategory
+public enum ItemCategory // FIX: revamp
 {
-    Collectible,     // General items (heart, scarf, backpack from mockup)
-    QuestItem,       // Items needed for quests (bread, fish)
-    ReflectionCard,  // Wisdom cards (one per chapter)
-    KeyItem,         // Story-critical items
-    Consumable       // Items that can be used
+    Collectible,    // General items (heart, scarf, backpack from mockup)
+	QuestItem,      // Items needed for quests (bread, fish)
+	KeyItem,        // Story-critical items
+	Consumable      // Items that can be used
 }
