@@ -1,9 +1,10 @@
 using System;
 using UnityEngine;
 
+// FIX: restrict write access
+
 /// <summary>
-/// Item definition ScriptableObject. Create via: Right-click > Create > Karma > Item.
-/// Used for inventory items, quest items, collectibles, and reflection cards.
+/// Describes an item which can be acquired and stored in the inventory as a consumable, quest item, or collectible
 /// </summary>
 [CreateAssetMenu(fileName = "NewItem", menuName = "Karma/Item", order = 3)]
 public class ItemSO : ScriptableObject
@@ -20,32 +21,53 @@ public class ItemSO : ScriptableObject
 	public string UID => uid;
 
 
-    [Header("Item Info")]
+	[Header("Item Info")]
     [Tooltip("Display name shown in inventory")]
-    public string itemName;
+	/// <summary>
+	/// Display name shown to the player.
+	/// </summary>
+	public string itemName;
 
     [Tooltip("Description shown when item is selected in inventory")]
     [TextArea(2, 4)]
-    public string description;
+	/// <summary>
+	/// Longer description / details about the item.
+	/// </summary>
+	public string description;
 
-    [Tooltip("Item icon for inventory grid")]
-    public Sprite icon;
+    [Tooltip("Item icon used for inventory UI")]
+	/// <summary>
+	/// Sprite used for inventory UI
+	/// </summary>
+	public Sprite icon;
 
 
     [Header("Item Type")]
     [Tooltip("Category of this item")]
-    public ItemCategory category = ItemCategory.Collectible;
+	/// <summary>
+	/// Item category used by systems that filter or handle behavior per-category
+	/// </summary>
+	public ItemCategory category = ItemCategory.Collectible;
 
 
     [Header("Karma / Value")]
     [Tooltip("Karma awarded when this item is collected")]
-    public int karmaOnCollect;
+	/// <summary>
+	/// Amount of karma to award on collection
+	/// </summary>
+	public int karmaOnCollect;
 
     [Tooltip("Coin value of this item")]
-    public int coinValue;
+	/// <summary>
+	/// In-game currency value of the item
+	/// </summary>
+	public int coinValue;
 
     [Tooltip("Flavor text shown below description (earned in chapter X quest Y)")]
-    public string flavorText;
+	/// <summary>
+	/// Optional flavor text
+	/// </summary>
+	public string flavorText;
 
 
 	// DEP // FIX: remove this stuff from the greater codebase (is currently being used in dialog system)
@@ -56,7 +78,7 @@ public class ItemSO : ScriptableObject
 /// <summary>
 /// Categories for inventory items.
 /// </summary>
-public enum ItemCategory
+public enum ItemCategory // FIX: revamp
 {
     Collectible,    // General items (heart, scarf, backpack from mockup)
 	QuestItem,      // Items needed for quests (bread, fish)
