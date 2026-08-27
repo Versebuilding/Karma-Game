@@ -4583,10 +4583,12 @@ MonoBehaviour:
   player: {fileID: 1394709062}
   smoothSpeed: 8
   shoulderOffset: 1.2
-  dialogueForwardOffset: 1.5
+  dialogueForwardOffset: -2.2
   dialogueVerticalOffset: -2
+  useDialogueFixedY: 1
+  dialogueFixedY: -16
   dialogueTransitionSpeed: 3
-  dialogueFOV: 40
+  dialogueFOV: 48
   effectTransitionSpeed: 4
   useDepthOfField: 1
   dofFocalLength: 50
