@@ -33,8 +33,8 @@ public class ThirdPersonCamera : MonoBehaviour
     [Range(0f, 5f)]
     [SerializeField] private float shoulderOffset = 2.5f;
 
-    [Tooltip("Forward offset toward the NPC (positive = camera closer to conversation midpoint)")]
-    [Range(0f, 5f)]
+    [Tooltip("Forward offset toward the NPC (negative = camera pulls back behind the player, showing their back)")]
+    [Range(-5f, 5f)]
     [SerializeField] private float dialogueForwardOffset = 0f;
 
     [Tooltip("Vertical offset during dialogue (negative = camera lower, slight upward angle)")]
@@ -47,6 +47,12 @@ public class ThirdPersonCamera : MonoBehaviour
 
     [Tooltip("Transition speed into/out of dialogue camera")]
     [SerializeField] private float dialogueTransitionSpeed = 5f;
+
+    [Tooltip("Pin the camera rig to a fixed world-space Y during dialogue")]
+    [SerializeField] private bool useDialogueFixedY = false;
+
+    [Tooltip("World-space Y for the rig while in dialogue (when pinned)")]
+    [SerializeField] private float dialogueFixedY = -16f;
 
     // ─── Dialogue Zoom ───────────────────────────────────────
     [Header("Dialogue Zoom")]
@@ -316,6 +322,10 @@ public class ThirdPersonCamera : MonoBehaviour
             + right * shoulderOffset
             + dirToNPC * dialogueForwardOffset
             + Vector3.up * cameraY;
+
+        // Optional hard lock: pin the rig to a fixed world Y during dialogue.
+        if (useDialogueFixedY)
+            targetPos.y = dialogueFixedY;
 
         float t = dialogueTransitionSpeed * Time.deltaTime;
         transform.position = Vector3.Lerp(transform.position, targetPos, t);

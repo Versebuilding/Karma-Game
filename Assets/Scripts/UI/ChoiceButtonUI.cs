@@ -177,34 +177,15 @@ public class ChoiceButtonUI : MonoBehaviour
 
         if (selected)
         {
-            // Full color fill when selected
-            Color selectedBg;
-            switch (currentStyle)
-            {
-                case ChoiceStyle.Empathetic:
-                    selectedBg = empatheticColor;
-                    break;
-                case ChoiceStyle.Selfish:
-                    selectedBg = selfishColor;
-                    break;
-                default:
-                    selectedBg = new Color(0.85f, 0.82f, 0.78f, 1f);
-                    break;
-            }
-
+            // Selected = orange fill with white text; badge darkens for contrast.
             if (backgroundImage != null)
-                backgroundImage.color = selectedBg;
+                backgroundImage.color = UnifiedBadge;
 
-            // White text when selected
             if (choiceText != null)
-                choiceText.color = currentStyle == ChoiceStyle.Neutral
-                    ? neutralTextColor : Color.white;
+                choiceText.color = Color.white;
 
-            // Badge stays orange/dark
             if (inputLabelBadge != null)
-                inputLabelBadge.color = currentStyle == ChoiceStyle.Empathetic
-                    ? new Color(0.85f, 0.5f, 0.1f, 1f) // darker orange for contrast
-                    : empatheticColor;
+                inputLabelBadge.color = new Color(0.85f, 0.5f, 0.1f, 1f);
         }
         else
         {
@@ -244,26 +225,17 @@ public class ChoiceButtonUI : MonoBehaviour
 
     // ─── Style Application ────────────────────────────────────
 
+    // Unified visual language: every choice uses the same cream panel with an
+    // orange key badge (matching the speech bubble), regardless of choice style.
+    // Style still drives karma outcomes — just not the resting colors.
+    private static readonly Color UnifiedBg = new Color(1f, 0.97f, 0.9f, 0.95f);      // cream
+    private static readonly Color UnifiedText = new Color(0.15f, 0.1f, 0.05f, 1f);    // dark brown
+    private static readonly Color UnifiedBadge = new Color(1f, 0.65f, 0.2f, 1f);      // orange
+
     private void ApplyStyle(ChoiceStyle style, bool available)
     {
-        Color bgColor;
-        Color textColor;
-
-        switch (style)
-        {
-            case ChoiceStyle.Empathetic:
-                bgColor = empatheticColor;
-                textColor = empatheticTextColor;
-                break;
-            case ChoiceStyle.Selfish:
-                bgColor = selfishColor;
-                textColor = selfishTextColor;
-                break;
-            default: // Neutral
-                bgColor = neutralColor;
-                textColor = neutralTextColor;
-                break;
-        }
+        Color bgColor = UnifiedBg;
+        Color textColor = UnifiedText;
 
         if (!available)
         {
@@ -276,5 +248,8 @@ public class ChoiceButtonUI : MonoBehaviour
 
         if (choiceText != null)
             choiceText.color = textColor;
+
+        if (inputLabelBadge != null)
+            inputLabelBadge.color = UnifiedBadge;
     }
 }
