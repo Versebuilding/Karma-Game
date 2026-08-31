@@ -6,8 +6,17 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Scenes/Start.unity
+    guid: a44a33490c923426b9b92ac75810a9d8
+  - enabled: 1
+    path: Assets/Scenes/SelectRealm.unity
+    guid: 32219bd588ac043fdbde7bd77cb047b4
+  - enabled: 1
+    path: Assets/Scenes/Chapter1- Serna.unity
+    guid: f8a2c7dfa7feb488b961486f91b6ec82
+  - enabled: 1
+    path: Assets/Scenes/GhostHungryMinigame.unity
+    guid: 946438e0d3373664493cfad235a69c78
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

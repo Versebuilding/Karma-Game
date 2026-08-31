@@ -360,6 +360,7 @@ MonoBehaviour:
   moveY: 119
   speed: 80
   fadeSpeed: 1
+  chapterSceneName: Chapter1- Serna
 --- !u!4 &1124446307
 Transform:
   m_ObjectHideFlags: 0

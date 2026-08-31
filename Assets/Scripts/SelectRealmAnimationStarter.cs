@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class SelectRealmAnimationStarter : MonoBehaviour
 {
@@ -10,6 +11,9 @@ public class SelectRealmAnimationStarter : MonoBehaviour
     public float moveY = 100f;
     public float speed = 100f;
     public float fadeSpeed = 1f;
+
+    [Tooltip("Scene loaded when the start button is clicked (must be in Build Settings)")]
+    public string chapterSceneName = "Chapter1- Serna";
 
     private Vector2 targetPosUp;
     private Vector2 targetPosDown;
@@ -51,7 +55,17 @@ public class SelectRealmAnimationStarter : MonoBehaviour
                 buttonCanvasGroup = fadeButton.gameObject.AddComponent<CanvasGroup>();
             }
             buttonCanvasGroup.alpha = 0f;
+
+            // The prefab's onClick wiring is broken (null target) — wire the
+            // chapter launch here so the start button actually enters the realm.
+            fadeButton.onClick.AddListener(LaunchChapter);
         }
+    }
+
+    private void LaunchChapter()
+    {
+        if (!string.IsNullOrEmpty(chapterSceneName))
+            SceneManager.LoadScene(chapterSceneName);
     }
 
     void Update()
