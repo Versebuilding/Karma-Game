@@ -496,6 +496,21 @@ public class QuestManager : MonoBehaviour
             }
         }
 
+        // Fallback: scene wiring can go stale/empty (old serialized instances,
+        // scenes set up before quests existed). Quest assets live in a Resources
+        // folder so they are always discoverable regardless of scene state.
+        if (questRegistry.Count == 0)
+        {
+            var loaded = Resources.LoadAll<QuestSO>("");
+            foreach (var def in loaded)
+            {
+                if (def != null && !string.IsNullOrEmpty(def.questId))
+                    questRegistry[def.questId] = def;
+            }
+            if (loaded.Length > 0)
+                questDefinitions = loaded;
+        }
+
         Debug.Log($"QuestManager: Registered {questRegistry.Count} quest definitions.");
     }
 
