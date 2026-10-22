@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections;
 using TMPro;
 using System;
+using UnityEngine.EventSystems;
 
 public class KarmaScorePopup : MonoBehaviour
 {
@@ -41,6 +42,10 @@ public class KarmaScorePopup : MonoBehaviour
         {
             KarmaManager.Instance.OnKarmaChanged += HandleKarmaChanged;
         }
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
+        }
     }
 
     void OnDisable()
@@ -48,6 +53,10 @@ public class KarmaScorePopup : MonoBehaviour
         if (KarmaManager.Instance != null)
         {
             KarmaManager.Instance.OnKarmaChanged -= HandleKarmaChanged;
+        }
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.OnDialogueEnded -= HandleDialogueEnded;
         }
     }
 
@@ -69,6 +78,21 @@ public class KarmaScorePopup : MonoBehaviour
             KarmaManager.Instance.OnKarmaChanged += HandleKarmaChanged;
             HandleKarmaChanged(KarmaManager.Instance.CurrentKarma, 0);
             karmabar2.fillAmount = targetFill;
+
+            // Don't fire milestone popups for karma the player already had.
+            float startSize = targetFill * 5.1f;
+            if (startSize >= 4.900035f) currentPetal = 5;
+            else if (startSize >= 3.600016f) currentPetal = 4;
+            else if (startSize >= 2.41f) currentPetal = 3;
+            else if (startSize >= 1.28f) currentPetal = 2;
+            else if (startSize >= 0.17f) currentPetal = 1;
+        }
+
+        if (DialogueManager.Instance != null)
+        {
+            // Late subscribe in case the manager awoke after OnEnable.
+            DialogueManager.Instance.OnDialogueEnded -= HandleDialogueEnded;
+            DialogueManager.Instance.OnDialogueEnded += HandleDialogueEnded;
         }
 
         score = KarmaManager.Instance != null ? KarmaManager.Instance.CurrentKarma : 0;
@@ -79,6 +103,71 @@ public class KarmaScorePopup : MonoBehaviour
         {
             cameraTransform = Camera.main.transform;
         }
+
+        AutoFitToScreen();
+        HookKarmaFlowerClick();
+    }
+
+    [Tooltip("Fraction of the screen height the popup should occupy")]
+    [Range(0.2f, 0.95f)] public float screenHeightFraction = 0.55f;
+
+    /// <summary>
+    /// The popup rig is world-space sprites held in front of the camera, so
+    /// its on-screen size depends on camera FOV and authoring scale. Measure
+    /// its renderer bounds and scale it so it fills screenHeightFraction of
+    /// the view at the follow distance.
+    /// </summary>
+    private void AutoFitToScreen()
+    {
+        if (karmascore == null) return;
+        bool wasActive = karmascore.activeSelf;
+        karmascore.SetActive(true);
+
+        var renderers = karmascore.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length > 0)
+        {
+            Bounds b = renderers[0].bounds;
+            foreach (var r in renderers) b.Encapsulate(r.bounds);
+
+            var cam = Camera.main;
+            float frustumHeight = cam != null
+                ? 2f * distanceInFront * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad)
+                : 5f;
+            float targetHeight = frustumHeight * screenHeightFraction;
+
+            if (b.size.y > 0.0001f)
+            {
+                float factor = targetHeight / b.size.y;
+                karmascore.transform.localScale *= factor;
+            }
+        }
+
+        karmascore.SetActive(wasActive);
+    }
+
+    /// <summary>
+    /// Tapping the karma flower HUD (top-left score cluster) toggles the
+    /// popup. Adds an invisible stretched Button over the KarmaFlowerUI so
+    /// no scene wiring is needed.
+    /// </summary>
+    private void HookKarmaFlowerClick()
+    {
+        var flowerUI = FindFirstObjectByType<KarmaFlowerUI>();
+        if (flowerUI == null) return;
+
+        var btnGo = new GameObject("KarmaPopupTapTarget", typeof(RectTransform));
+        btnGo.transform.SetParent(flowerUI.transform, false);
+        var rt = (RectTransform)btnGo.transform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        var img = btnGo.AddComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, 0f); // invisible, still clickable
+        var btn = btnGo.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(ImageClicked);
     }
 
 
@@ -112,33 +201,93 @@ public class KarmaScorePopup : MonoBehaviour
 
     }
 
-    //Timer on karma score popup 
+    private bool popupOpen = false;
+
+    /// <summary>
+    /// Open the popup: place it once in front of the camera (fixed — it no
+    /// longer follows), then pause the whole game (dialogue, food rain,
+    /// movement) and the music until it closes.
+    /// </summary>
+    private void ShowPopup()
+    {
+        if (popupOpen) return;
+        popupOpen = true;
+
+        // Fixed placement at open time
+        transform.position = cameraTransform.position + cameraTransform.forward * distanceInFront;
+        transform.rotation = cameraTransform.rotation;
+
+        karmascore.SetActive(true);
+        SetOverlayVisible(true);
+    }
+
+    private void HidePopup()
+    {
+        if (!popupOpen) return;
+        popupOpen = false;
+        karmascore.SetActive(false);
+        SetOverlayVisible(false);
+    }
+
+    private SpriteRenderer darkOverlay;
+
+    /// <summary>
+    /// 80% black sheet between the popup and the world: a world-space quad
+    /// half a unit behind the popup, scaled past the camera frustum, drawn
+    /// under the popup sprites.
+    /// </summary>
+    private void SetOverlayVisible(bool visible)
+    {
+        if (darkOverlay == null)
+        {
+            var tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, Color.white);
+            tex.Apply();
+            var sprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+
+            var go = new GameObject("PopupDarkOverlay");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = new Vector3(0f, 0f, 0.5f); // just behind the popup
+            darkOverlay = go.AddComponent<SpriteRenderer>();
+            darkOverlay.sprite = sprite;
+            darkOverlay.color = new Color(0f, 0f, 0f, 0.8f);
+            darkOverlay.sortingOrder = -10; // under the popup sprites
+
+            var cam = Camera.main;
+            float h = cam != null
+                ? 2f * (distanceInFront + 0.5f) * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad)
+                : 10f;
+            // Oversize well past the frustum so edges never show.
+            go.transform.localScale = new Vector3(h * cam.aspect * 1.5f / transform.localScale.x,
+                                                  h * 1.5f / transform.localScale.y, 1f);
+        }
+        darkOverlay.gameObject.SetActive(visible);
+    }
+
+    //Timer on karma score popup (realtime — the game clock is paused)
     IEnumerator PopUpTimer()
     {
         stop = true;
-
-        karmascore.SetActive(true);
-
+        ShowPopup();
         yield return new WaitForSeconds(3f);
-
-        karmascore.SetActive(false);
+        HidePopup();
         stop = false;
     }
 
     //When progress bar image is clicked, the karma popup score will show up and disappear when clicked again
     public void ImageClicked()
     {
-        if (count == 1)
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
+
+        if (!popupOpen)
         {
-            karmascore.SetActive(true);
-            count = 2;
+            ShowPopup();
         }
-        else if (count == 2)
+        else if (!stop) // milestone auto-popups close on their own timer
         {
-            karmascore.SetActive(false);
-            count = 1;
+            HidePopup();
         }
-        
     }
 
     //Petals fade an change into their colors based on position of progress bar
@@ -242,38 +391,65 @@ public class KarmaScorePopup : MonoBehaviour
         if (karmabar.size.x >= 0.17f && currentPetal < 1 && !stop)
         {
             currentPetal = 1;
-            StartCoroutine(PopUpTimer());
+            QueueMilestonePopup();
         }
         else if (karmabar.size.x >= 1.28f && currentPetal < 2 && !stop)
         {
             currentPetal = 2;
-            StartCoroutine(PopUpTimer());
+            QueueMilestonePopup();
         }
         else if (karmabar.size.x >= 2.41f && currentPetal < 3 && !stop)
         {
             currentPetal = 3;
-            StartCoroutine(PopUpTimer());
+            QueueMilestonePopup();
         }
         else if (karmabar.size.x >= 3.600016f && currentPetal < 4 && !stop)
         {
             currentPetal = 4;
-            StartCoroutine(PopUpTimer());
+            QueueMilestonePopup();
         }
         else if (karmabar.size.x >= 4.900035f && currentPetal < 5 && !stop)
         {
             currentPetal = 5;
-            StartCoroutine(PopUpTimer());
+            QueueMilestonePopup();
         }
+    }
+
+    private bool milestonePending = false;
+
+    /// <summary>
+    /// Milestone popups never interrupt a conversation: if dialogue is
+    /// running, remember the milestone and show the popup once the player
+    /// leaves interaction mode (dialogue ends).
+    /// </summary>
+    private void QueueMilestonePopup()
+    {
+        if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
+        {
+            milestonePending = true;
+            return;
+        }
+        StartCoroutine(PopUpTimer());
+    }
+
+    private void HandleDialogueEnded()
+    {
+        if (milestonePending)
+        {
+            milestonePending = false;
+            StartCoroutine(ShowPendingAfterDelay());
+        }
+    }
+
+    private IEnumerator ShowPendingAfterDelay()
+    {
+        yield return new WaitForSeconds(0.6f); // let the dialogue UI fade out
+        if (!popupOpen) StartCoroutine(PopUpTimer());
     }
 
     //KarmaScore follows camera
 
-    void LateUpdate()
-    {
-        Vector3 centerPosition = cameraTransform.position + (cameraTransform.forward * distanceInFront);
-
-        transform.position = centerPosition;
-
-        transform.rotation = cameraTransform.rotation;
-    }
+    // Position is set once in ShowPopup() — the popup stays fixed on
+    // screen while open instead of following the camera.
+    void LateUpdate() { }
 }
